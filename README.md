@@ -1,2 +1,0 @@
-# HASY
-HASY dataset
