@@ -75,7 +75,7 @@ def generate_index(dataset_path):
     return symbol_id2index
 
 
-def load_images(dataset_path, csv_file_path, symbol_id2index):
+def load_images(dataset_path, csv_file_path, symbol_id2index, one_hot=True):
     """
     Load the images into a 4D uint8 numpy array [index, y, x, depth].
 
@@ -108,18 +108,17 @@ def load_images(dataset_path, csv_file_path, symbol_id2index):
         labels = []
         for i, data_item in enumerate(data):
             fname = os.path.join(dataset_path, data_item['path'])
-            img = scipy.ndimage.imread(fname, flatten=False, mode='L')
-            img = img.reshape((1, img.shape[0], img.shape[1], 1))
-            for y in range(WIDTH):
-                for x in range(HEIGHT):
-                    images[i][y][x][0] = img[0][y][x][0]
+            images[i, :, :, 0] = scipy.ndimage.imread(fname,
+                                                      flatten=False,
+                                                      mode='L')
             label = symbol_id2index[data_item['symbol_id']]
             labels.append(label)
         # Pickle it to speed up later runs
         data = images, numpy.array(labels)
         with open(pickle_filepath, 'wb') as handle:
             pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    data = (data[0], numpy.eye(len(symbol_id2index))[data[1]])
+    if one_hot:
+        data = (data[0], numpy.eye(len(symbol_id2index))[data[1]])
     return data
 
 
