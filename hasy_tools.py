@@ -22,8 +22,10 @@ logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
                     level=logging.INFO,
                     stream=sys.stdout)
 
+__version__ = "v1.0"
 
-def load_csv(filepath, delimiter=',', quotechar="'"):
+
+def _load_csv(filepath, delimiter=',', quotechar="'"):
     """
     Load a CSV file.
 
@@ -64,7 +66,7 @@ def generate_index(dataset_path):
         number of unique labels.
     """
     symbol_id2index = {}
-    data = load_csv(os.path.join(dataset_path, 'hasy-test-labels.csv'))
+    data = _load_csv(os.path.join(dataset_path, 'hasy-test-labels.csv'))
     i = 0
     for item in data:
         if item['symbol_id'] not in symbol_id2index:
@@ -101,7 +103,7 @@ def load_images(dataset_path, csv_file_path, symbol_id2index):
         with open(pickle_filepath, 'rb') as handle:
             data = pickle.load(handle)
     else:
-        data = load_csv(csv_filepath)
+        data = _load_csv(csv_filepath)
         images = numpy.zeros((len(data), WIDTH, HEIGHT, 1))
         labels = []
         for i, data_item in enumerate(data):
@@ -142,10 +144,10 @@ def _is_valid_png(filepath):
         return False
 
 
-def verify_all():
+def _verify_all():
     """Verify all PNG files in the training and test directories."""
     for csv_data_path in ['hasy-test-labels.csv', 'hasy-train-labels.csv']:
-        train_data = load_csv(csv_data_path)
+        train_data = _load_csv(csv_data_path)
         for data_item in train_data:
             if not _is_valid_png(data_item['path']):
                 logging.info("%s is invalid." % data_item['path'])
@@ -199,7 +201,7 @@ def _get_parser():
 if __name__ == "__main__":
     args = _get_parser().parse_args()
     if args.verify:
-        verify_all()
+        _verify_all()
     if args.overview:
-        img_src = load_csv('hasy-train-labels.csv')
+        img_src = _load_csv('hasy-train-labels.csv')
         create_random_overview(img_src, x_images=10, y_images=10)
