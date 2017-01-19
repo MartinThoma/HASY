@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 """
 Tools for the HASY dataset.
@@ -17,6 +18,7 @@ import sys
 from six.moves import cPickle as pickle
 import numpy
 import scipy.ndimage
+import matplotlib.pyplot as plt
 
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
                     level=logging.INFO,
@@ -179,6 +181,166 @@ def create_random_overview(img_src, x_images, y_images):
     background.save('hasy-overview.png')
 
 
+def _get_colors(data, verbose=False):
+    """
+    Get how often each color is used in data.
+
+    Parameters
+    ----------
+    data : dict
+        with key 'path' pointing to an image
+
+    Returns
+    -------
+    color_count : dict
+        Maps a grayscale value (0..255) to how often it was in `data`
+    """
+    color_count = {}
+    for i in range(256):
+        color_count[i] = 0
+    for i, data_item in enumerate(data):
+        if i % 1000 == 0 and i > 0 and verbose:
+            print("%i of %i done" % (i, len(data)))
+        fname = os.path.join('.', data_item['path'])
+        img = scipy.ndimage.imread(fname, flatten=False, mode='L')
+        for row in img:
+            for pixel in row:
+                color_count[pixel] += 1
+    return color_count
+
+
+def data_by_class(data):
+    """
+    Organize `data` by class.
+
+    Parameters
+    ----------
+    data : list of dicts
+        Each dict contains the key `symbol_id` which is the class label.
+
+    Returns
+    -------
+    dbc : dict
+        mapping class labels to lists of dicts
+    """
+    dbc = {}
+    for item in data:
+        if item['symbol_id'] in dbc:
+            dbc[item['symbol_id']].append(item)
+        else:
+            dbc[item['symbol_id']] = [item]
+    return dbc
+
+
+def _get_color_statistics(csv_filepath='hasy-train-labels.csv', verbose=False):
+    symbolid2latex = _get_symbolid2latex()
+    data = _load_csv(csv_filepath)
+    black_level, classes = [], []
+    for symbol_id, elements in data_by_class(data).items():
+        colors = _get_colors(elements)
+        b = colors[0]
+        w = colors[255]
+        black_level.append(float(b) / (b + w))
+        classes.append(symbol_id)
+        if verbose:
+            print("%s:\t%0.4f" % (symbol_id, black_level[-1]))
+    print("Average black level: %0.4f" % numpy.average(black_level))
+    print("Median black level: %0.4f" % numpy.median(black_level))
+    print("Minimum black level: %0.4f (class: %s)" %
+          (min(black_level),
+           [symbolid2latex[c]
+            for bl, c in zip(black_level, classes) if bl <= min(black_level)]))
+    print("Maximum black level: %0.4f (class: %s)" %
+          (max(black_level),
+           [symbolid2latex[c]
+            for bl, c in zip(black_level, classes) if bl >= max(black_level)]))
+
+
+def _get_symbolid2latex(csv_filepath='symbols.csv'):
+    symbol_data = _load_csv(csv_filepath)
+    symbolid2latex = {}
+    for row in symbol_data:
+        symbolid2latex[row['symbol_id']] = row['latex']
+    return symbolid2latex
+
+
+def _analyze_class_distribution(dataset_path='.',
+                                csv_filepath='hasy-train-labels.csv'):
+    """Plot the distribution of training data over graphs."""
+    symbol_id2index = generate_index(dataset_path)
+    index2symbol_id = {}
+    for index, symbol_id in symbol_id2index.items():
+        index2symbol_id[symbol_id] = index
+    data, y = load_images(dataset_path, csv_filepath, symbol_id2index,
+                          one_hot=False)
+
+    data = {}
+    for el in y:
+        if el in data:
+            data[el] += 1
+        else:
+            data[el] = 1
+    classes = data
+    images = len(y)
+
+    # Create plot
+    print("Classes: %i" % len(classes))
+    print("Images: %i" % images)
+
+    class_counts = sorted([count for _, count in classes.items()])
+    # plt.title('HASY training data distribution')
+    plt.xlabel('Amount of available training images')
+    plt.ylabel('Number of classes')
+    min_examples = 0
+    bin_size = 25
+    MAX_DATA = 1000
+    plt.hist(class_counts, bins=range(min_examples, MAX_DATA + 1, bin_size))
+    # plt.show()
+    filename = '{}.pdf'.format('training-data-dist')
+    plt.savefig(filename)
+    logging.info("Plot has been saved as {}".format(filename))
+
+    symbolid2latex = _get_symbolid2latex()
+
+    top10 = sorted(classes.items(), key=lambda n: n[1], reverse=True)[:10]
+    top10_data = 0
+    for index, count in top10:
+        print("\t%s:\t%i" % (symbolid2latex[index2symbol_id[index]], count))
+        top10_data += count
+    total_data = sum([count for index, count in classes.items()])
+    print("Top-10 has %i training data (%0.2f%% of total)" %
+          (top10_data, float(top10_data) * 100.0 / total_data))
+    print("%i classes have more than %i data items." %
+          (sum([1 for _, count in classes.items() if count > 1000]), MAX_DATA))
+
+
+def _analyze_pca(dataset_path='.', csv_filepath='hasy-train-labels.csv'):
+    from sklearn.decomposition import PCA
+    import itertools as it
+
+    symbol_id2index = generate_index(dataset_path)
+    data, y = load_images(dataset_path,
+                          csv_filepath,
+                          symbol_id2index,
+                          one_hot=False)
+    data = data.reshape(data.shape[0], data.shape[1] * data.shape[2])
+    pca = PCA()
+    pca.fit(data)
+    sum_ = 0.0
+    done_values = [None, None, None]
+    done_points = [False, False, False]
+    chck_points = [0.9, 0.95, 0.99]
+    for counter, el in enumerate(pca.explained_variance_ratio_):
+        sum_ += el
+        for check_point, done, i in zip(chck_points, done_points, it.count()):
+            if not done and sum_ >= check_point:
+                done_points[i] = counter
+                done_values[i] = sum_
+    for components, variance in zip(done_points, done_values):
+        print("%i components explain %0.2f of the variance" %
+              (components, variance))
+
+
 def _get_parser():
     """Get parser object for hasy_tools.py."""
     from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
@@ -194,6 +356,22 @@ def _get_parser():
                         action="store_true",
                         default=False,
                         help="Get overview of data")
+    parser.add_argument("--analyze_color",
+                        dest="analyze_color",
+                        action="store_true",
+                        default=False,
+                        help="Analyze the color distribution")
+    parser.add_argument("--class_distribution",
+                        dest="class_distribution",
+                        action="store_true",
+                        default=False,
+                        help="Analyze the class distribution")
+    parser.add_argument("--pca",
+                        dest="pca",
+                        action="store_true",
+                        default=False,
+                        help=("Show how many principal components explain "
+                              "90%% / 95%% / 99%% of the variance"))
     return parser
 
 
@@ -204,3 +382,9 @@ if __name__ == "__main__":
     if args.overview:
         img_src = _load_csv('hasy-train-labels.csv')
         create_random_overview(img_src, x_images=10, y_images=10)
+    if args.analyze_color:
+        _get_color_statistics(csv_filepath='hasy-train-labels.csv')
+    if args.class_distribution:
+        _analyze_class_distribution(csv_filepath='hasy-train-labels.csv')
+    if args.pca:
+        _analyze_pca(csv_filepath='hasy-train-labels.csv')
