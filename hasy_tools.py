@@ -16,7 +16,7 @@ from PIL import Image, ImageDraw
 import sys
 
 from six.moves import cPickle as pickle
-import numpy
+import numpy as np
 import scipy.ndimage
 import matplotlib.pyplot as plt
 
@@ -106,7 +106,7 @@ def load_images(dataset_path, csv_file_path, symbol_id2index, one_hot=True):
             data = pickle.load(handle)
     else:
         data = _load_csv(csv_filepath)
-        images = numpy.zeros((len(data), WIDTH, HEIGHT, 1))
+        images = np.zeros((len(data), WIDTH, HEIGHT, 1))
         labels = []
         for i, data_item in enumerate(data):
             fname = os.path.join(dataset_path, data_item['path'])
@@ -116,11 +116,11 @@ def load_images(dataset_path, csv_file_path, symbol_id2index, one_hot=True):
             label = symbol_id2index[data_item['symbol_id']]
             labels.append(label)
         # Pickle it to speed up later runs
-        data = images, numpy.array(labels)
+        data = images, np.array(labels)
         with open(pickle_filepath, 'wb') as handle:
             pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
     if one_hot:
-        data = (data[0], numpy.eye(len(symbol_id2index))[data[1]])
+        data = (data[0], np.eye(len(symbol_id2index))[data[1]])
     return data
 
 
@@ -244,8 +244,8 @@ def _get_color_statistics(csv_filepath='hasy-train-labels.csv', verbose=False):
         classes.append(symbol_id)
         if verbose:
             print("%s:\t%0.4f" % (symbol_id, black_level[-1]))
-    print("Average black level: %0.4f" % numpy.average(black_level))
-    print("Median black level: %0.4f" % numpy.median(black_level))
+    print("Average black level: %0.4f" % np.average(black_level))
+    print("Median black level: %0.4f" % np.median(black_level))
     print("Minimum black level: %0.4f (class: %s)" %
           (min(black_level),
            [symbolid2latex[c]
@@ -341,6 +341,51 @@ def _analyze_pca(dataset_path='.', csv_filepath='hasy-train-labels.csv'):
               (components, variance))
 
 
+def _get_euclidean_dist(e1, e2):
+    """Calculate the euclidean distance between e1 and e2."""
+    e1 = e1.flatten()
+    e2 = e2.flatten()
+    return sum([el1 * el2 for el1, el2 in zip(e1, e2)])**0.5
+
+
+def _inner_class_distance(data):
+    distances = []
+    mean_img = None
+    for e1 in data:  # nicer?
+        fname1 = os.path.join('.', e1['path'])
+        img1 = scipy.ndimage.imread(fname1, flatten=False, mode='L')
+        if mean_img is None:
+            mean_img = img1
+        else:
+            mean_img += img1
+    mean_img = mean_img / float(len(data))
+    for e1 in data:
+        fname1 = os.path.join('.', e1['path'])
+        img1 = scipy.ndimage.imread(fname1, flatten=False, mode='L')
+        dist = _get_euclidean_dist(img1, mean_img)
+        distances.append(dist)
+
+    return (distances, mean_img)
+
+
+def _analyze_distances(dataset_path='.', csv_filepath='hasy-train-labels.csv'):
+    """Analyze the distance between elements of one class and class means."""
+    symbolid2latex = _get_symbolid2latex()
+    data = _load_csv(csv_filepath)
+    data = data_by_class(data)
+    mean_imgs = []
+    for class_, data_class in data.items():
+        latex = symbolid2latex[class_]
+        d, mean_img = _inner_class_distance(data_class)
+        # scipy.misc.imshow(mean_img)
+        print("%s: min=%0.4f, avg=%0.4f, median=%0.4f max=%0.4f" %
+              (latex, np.min(d), np.average(d), np.median(d), np.max(d)))
+        for label, mean_c in mean_imgs:
+            d = _get_euclidean_dist(mean_c, mean_img)
+            print("\t%s: %0.4f" % (label, d))
+        mean_imgs.append((latex, mean_img))
+
+
 def _get_parser():
     """Get parser object for hasy_tools.py."""
     from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
@@ -366,6 +411,11 @@ def _get_parser():
                         action="store_true",
                         default=False,
                         help="Analyze the class distribution")
+    parser.add_argument("--distances",
+                        dest="distances",
+                        action="store_true",
+                        default=False,
+                        help="Analyze the euclidean distance distribution")
     parser.add_argument("--pca",
                         dest="pca",
                         action="store_true",
@@ -388,3 +438,5 @@ if __name__ == "__main__":
         _analyze_class_distribution(csv_filepath='hasy-train-labels.csv')
     if args.pca:
         _analyze_pca(csv_filepath='hasy-train-labels.csv')
+    if args.distances:
+        _analyze_distances(csv_filepath='hasy-train-labels.csv')
