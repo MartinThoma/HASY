@@ -265,7 +265,9 @@ def _get_symbolid2latex(csv_filepath='symbols.csv'):
 
 
 def _analyze_class_distribution(dataset_path='.',
-                                csv_filepath='hasy-train-labels.csv'):
+                                csv_filepath='hasy-train-labels.csv',
+                                max_data=1000,
+                                bin_size=25):
     """Plot the distribution of training data over graphs."""
     symbol_id2index = generate_index(dataset_path)
     index2symbol_id = {}
@@ -288,13 +290,12 @@ def _analyze_class_distribution(dataset_path='.',
     print("Images: %i" % images)
 
     class_counts = sorted([count for _, count in classes.items()])
+    print("\tmin: %i" % min(class_counts))
     # plt.title('HASY training data distribution')
     plt.xlabel('Amount of available training images')
     plt.ylabel('Number of classes')
     min_examples = 0
-    bin_size = 25
-    MAX_DATA = 1000
-    plt.hist(class_counts, bins=range(min_examples, MAX_DATA + 1, bin_size))
+    plt.hist(class_counts, bins=range(min_examples, max_data + 1, bin_size))
     # plt.show()
     filename = '{}.pdf'.format('training-data-dist')
     plt.savefig(filename)
@@ -311,7 +312,8 @@ def _analyze_class_distribution(dataset_path='.',
     print("Top-10 has %i training data (%0.2f%% of total)" %
           (top10_data, float(top10_data) * 100.0 / total_data))
     print("%i classes have more than %i data items." %
-          (sum([1 for _, count in classes.items() if count > 1000]), MAX_DATA))
+          (sum([1 for _, count in classes.items() if count > max_data]),
+           max_data))
 
 
 def _analyze_pca(dataset_path='.', csv_filepath='hasy-train-labels.csv'):
@@ -345,7 +347,7 @@ def _get_euclidean_dist(e1, e2):
     """Calculate the euclidean distance between e1 and e2."""
     e1 = e1.flatten()
     e2 = e2.flatten()
-    return sum([el1 * el2 for el1, el2 in zip(e1, e2)])**0.5
+    return sum([(el1 - el2)**2 for el1, el2 in zip(e1, e2)])**0.5
 
 
 def _inner_class_distance(data):
@@ -355,10 +357,19 @@ def _inner_class_distance(data):
         fname1 = os.path.join('.', e1['path'])
         img1 = scipy.ndimage.imread(fname1, flatten=False, mode='L')
         if mean_img is None:
-            mean_img = img1
+            # print("done")
+            mean_img = img1.tolist()
         else:
+            # print("before")
+            # print(mean_img)
+            # print("add")
+            # print(img1)
             mean_img += img1
+            # print("after")
+            # print(mean_img)
     mean_img = mean_img / float(len(data))
+    # mean_img = thresholdize(mean_img, 'auto')
+    scipy.misc.imshow(mean_img)
     for e1 in data:
         fname1 = os.path.join('.', e1['path'])
         img1 = scipy.ndimage.imread(fname1, flatten=False, mode='L')
@@ -366,6 +377,24 @@ def _inner_class_distance(data):
         distances.append(dist)
 
     return (distances, mean_img)
+
+
+def thresholdize(img, threshold=0.5):
+    """Create a black-and-white image from a grayscale image."""
+    img_new = []
+    if threshold == 'auto':
+        img_flat = sorted(img.flatten())
+        threshold_ind = int(0.85 * len(img_flat))
+        threshold = img_flat[threshold_ind]
+    for row in img:
+        bla = []
+        for col in row:
+            if col > threshold:
+                bla.append(1)
+            else:
+                bla.append(0)
+        img_new.append(bla)
+    return np.array(img_new)
 
 
 def _analyze_distances(dataset_path='.', csv_filepath='hasy-train-labels.csv'):
@@ -380,8 +409,10 @@ def _analyze_distances(dataset_path='.', csv_filepath='hasy-train-labels.csv'):
         # scipy.misc.imshow(mean_img)
         print("%s: min=%0.4f, avg=%0.4f, median=%0.4f max=%0.4f" %
               (latex, np.min(d), np.average(d), np.median(d), np.max(d)))
-        for label, mean_c in mean_imgs:
-            d = _get_euclidean_dist(mean_c, mean_img)
+        distarr = sorted([(label, mean_c, _get_euclidean_dist(mean_c, mean_img))
+                          for label, mean_c in mean_imgs],
+                         key=lambda n: n[2])
+        for label, mean_c, d in distarr:
             print("\t%s: %0.4f" % (label, d))
         mean_imgs.append((latex, mean_img))
 
@@ -391,6 +422,10 @@ def _get_parser():
     from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
     parser = ArgumentParser(description=__doc__,
                             formatter_class=ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--dataset",
+                        dest="dataset",
+                        default='hasy-train-labels.csv',
+                        help="specify which data to use")
     parser.add_argument("--verify",
                         dest="verify",
                         action="store_true",
@@ -430,12 +465,14 @@ if __name__ == "__main__":
     if args.verify:
         _verify_all()
     if args.overview:
-        img_src = _load_csv('hasy-train-labels.csv')
+        img_src = _load_csv(args.dataset)
         create_random_overview(img_src, x_images=10, y_images=10)
     if args.analyze_color:
-        _get_color_statistics(csv_filepath='hasy-train-labels.csv')
+        _get_color_statistics(csv_filepath=args.dataset)
     if args.class_distribution:
-        _analyze_class_distribution(csv_filepath='hasy-train-labels.csv')
+        _analyze_class_distribution(csv_filepath=args.dataset,
+                                    max_data=200,
+                                    bin_size=5)
     if args.pca:
         _analyze_pca(csv_filepath='hasy-train-labels.csv')
     if args.distances:
