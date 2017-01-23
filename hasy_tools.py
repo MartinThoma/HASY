@@ -317,6 +317,16 @@ def _analyze_class_distribution(dataset_path='.',
 
 
 def _analyze_pca(dataset_path='.', csv_filepath='hasy-train-labels.csv'):
+    """
+    Analyze how much data can be compressed.
+
+    Parameters
+    ----------
+    dataset_path : str
+        Path to the HASY main directory
+    csv_filepath : str
+        Path relative to dataset_path to a CSV file which points to images
+    """
     from sklearn.decomposition import PCA
     import itertools as it
 
@@ -417,6 +427,32 @@ def _analyze_distances(dataset_path='.', csv_filepath='hasy-train-labels.csv'):
         mean_imgs.append((latex, mean_img))
 
 
+def _analyze_variance(dataset_path='.', csv_filepath='hasy-train-labels.csv'):
+    symbol_id2index = generate_index(dataset_path)
+    data, y = load_images(dataset_path,
+                          csv_filepath,
+                          symbol_id2index,
+                          one_hot=False)
+    # Calculate mean
+    sum_ = np.zeros((32, 32))
+    for el in data:
+        el = np.squeeze(el)
+        sum_ += el
+    mean_ = sum_ / float(len(data))
+    scipy.misc.imshow(mean_)
+
+    # Calculate variance
+    centered_ = np.zeros((32, 32))
+    for el in data:
+        el = np.squeeze(el)
+        centered_ += (el - mean_)**2
+    centered_ = (1. / len(data)) * centered_**0.5
+    scipy.misc.imshow(centered_)
+    for row in list(centered_):
+        row = list(row)
+        print(" ".join(["%0.1f" % nr for nr in row]))
+
+
 def _get_parser():
     """Get parser object for hasy_tools.py."""
     from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
@@ -457,6 +493,11 @@ def _get_parser():
                         default=False,
                         help=("Show how many principal components explain "
                               "90%% / 95%% / 99%% of the variance"))
+    parser.add_argument("--variance",
+                        dest="variance",
+                        action="store_true",
+                        default=False,
+                        help="Analyze the variance of features")
     return parser
 
 
@@ -474,6 +515,8 @@ if __name__ == "__main__":
                                     max_data=200,
                                     bin_size=5)
     if args.pca:
-        _analyze_pca(csv_filepath='hasy-train-labels.csv')
+        _analyze_pca(csv_filepath=args.dataset)
     if args.distances:
-        _analyze_distances(csv_filepath='hasy-train-labels.csv')
+        _analyze_distances(csv_filepath=args.dataset)
+    if args.variance:
+        _analyze_variance(csv_filepath=args.dataset)
