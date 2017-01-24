@@ -489,12 +489,32 @@ def _analyze_correlation(csv_filepath='hasy-train-labels.csv'):
 
 def _create_stratified_split(n_splits, data, labels):
     from sklearn.cross_validation import StratifiedKFold
-    help(StratifiedKFold)
     skf = StratifiedKFold(labels, n_folds=n_splits)
+    i = 1
+    kdirectory = '10-fold-cross-validation'
+    if not os.path.exists(kdirectory):
+            os.makedirs(kdirectory)
     for train_index, test_index in skf:
-        print("TRAIN:", train_index, "TEST:", test_index)
-        # X_train, X_test = data[train_index], data[test_index]
-        # y_train, y_test = labels[train_index], labels[test_index]
+        print("Create fold %i" % i)
+        directory = "%s/fold-%i" % (kdirectory, i)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        else:
+            print("Directory '%s' already exists. Please remove it." %
+                  directory)
+        # print("TRAIN:", train_index, "TEST:", test_index)
+        i += 1
+        train = [data[el] for el in train_index]
+        test_ = [data[el] for el in test_index]
+        for dataset, name in [(train, 'train'), (test_, 'test')]:
+            with open("%s/%s.csv" % (directory, name), 'wb') as csv_file:
+                csv_writer = csv.writer(csv_file)
+                csv_writer.writerow(('path', 'symbol_id', 'latex', 'user_id'))
+                for el in dataset:
+                    csv_writer.writerow(("../../%s" % el['path'],
+                                         el['symbol_id'],
+                                         el['latex'],
+                                         el['user_id']))
 
 
 def _get_parser():
@@ -575,6 +595,6 @@ if __name__ == "__main__":
     if args.correlation:
         _analyze_correlation(csv_filepath=args.dataset)
     if args.create_folds:
-        data = _load_csv('hasy-test-labels.csv')
+        data = _load_csv(args.dataset)
         labels = [el['symbol_id'] for el in data]
         _create_stratified_split(int(args.create_folds), data, labels)
