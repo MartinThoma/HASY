@@ -18,3 +18,9 @@ If you want to get more information about the shell script options, execute
 If you want to use `hasy_tools.py` as a Python module, see
 
     python -c "import hasy_tools;help(hasy_tools)"
+
+
+## Changelog
+
+* HASYv2: Points were not rendered in HASYv1; improved hasy_tools
+* 28.01.2017, HASYv1: Initial upload to https://doi.org/10.5281/zenodo.250239
