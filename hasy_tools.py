@@ -49,7 +49,8 @@ def _load_csv(filepath, delimiter=',', quotechar="'"):
                                 quotechar=quotechar)
         for row in reader:
             if 'path' in row:
-                row['path'] = os.path.join(csv_dir, row['path'])
+                row['path'] = os.path.abspath(os.path.join(csv_dir,
+                                                           row['path']))
             data.append(row)
     return data
 
@@ -419,7 +420,8 @@ def _analyze_distances(csv_filepath):
         # scipy.misc.imshow(mean_img)
         print("%s: min=%0.4f, avg=%0.4f, median=%0.4f max=%0.4f" %
               (latex, np.min(d), np.average(d), np.median(d), np.max(d)))
-        distarr = sorted([(label, mean_c, _get_euclidean_dist(mean_c, mean_img))
+        distarr = sorted([(label, mean_c, _get_euclidean_dist(mean_c,
+                                                              mean_img))
                           for label, mean_c in mean_imgs],
                          key=lambda n: n[2])
         for label, mean_c, d in distarr:
