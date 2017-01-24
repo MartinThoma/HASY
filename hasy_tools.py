@@ -487,6 +487,16 @@ def _analyze_correlation(csv_filepath='hasy-train-labels.csv'):
     plt.savefig(filename)
 
 
+def _create_stratified_split(n_splits, data, labels):
+    from sklearn.cross_validation import StratifiedKFold
+    help(StratifiedKFold)
+    skf = StratifiedKFold(labels, n_folds=n_splits)
+    for train_index, test_index in skf:
+        print("TRAIN:", train_index, "TEST:", test_index)
+        # X_train, X_test = data[train_index], data[test_index]
+        # y_train, y_test = labels[train_index], labels[test_index]
+
+
 def _get_parser():
     """Get parser object for hasy_tools.py."""
     from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
@@ -537,6 +547,9 @@ def _get_parser():
                         action="store_true",
                         default=False,
                         help="Analyze the correlation of features")
+    parser.add_argument("--create_folds",
+                        dest="create_folds",
+                        help="Create stratified folds")
     return parser
 
 
@@ -561,3 +574,7 @@ if __name__ == "__main__":
         _analyze_variance(csv_filepath=args.dataset)
     if args.correlation:
         _analyze_correlation(csv_filepath=args.dataset)
+    if args.create_folds:
+        data = _load_csv('hasy-test-labels.csv')
+        labels = [el['symbol_id'] for el in data]
+        _create_stratified_split(int(args.create_folds), data, labels)
