@@ -118,6 +118,7 @@ def load_images(dataset_path, csv_file_path, symbol_id2index, one_hot=True,
                                                       mode='L')
         label = symbol_id2index[data_item['symbol_id']]
         labels.append(label)
+    data = images, np.array(labels)
     if one_hot:
         data = (data[0], np.eye(len(symbol_id2index))[data[1]])
     return data
@@ -296,7 +297,7 @@ def _analyze_class_distribution(dataset_path='.',
     min_examples = 0
     plt.hist(class_counts, bins=range(min_examples, max_data + 1, bin_size))
     # plt.show()
-    filename = '{}.pdf'.format('training-data-dist')
+    filename = '{}.pdf'.format('data-dist')
     plt.savefig(filename)
     logging.info("Plot has been saved as {}".format(filename))
 
@@ -466,17 +467,25 @@ def _analyze_correlation(csv_filepath='hasy-train-labels.csv'):
                           flatten=True)
     df = pd.DataFrame(data=data)
 
-    logging.info("Data loaded. Start correlation calculation.")
+    logging.info("Data loaded. Start correlation calculation. Takes 1.5h.")
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
+
+    # Where we want the ticks, in pixel locations
+    ticks = np.linspace(0, 1024, 17)
+    # What those pixel locations correspond to in data coordinates.
+    # Also set the float format here
+    ax1.set_xticks(ticks)
+    ax1.set_yticks(ticks)
+
     cmap = cm.get_cmap('jet', 30)
     cax = ax1.imshow(df.corr(), interpolation="nearest", cmap=cmap)
     ax1.grid(True)
-    plt.title('Abalone Feature Correlation')
     # Add colorbar, make sure to specify tick locations to match desired
     # ticklabels
     fig.colorbar(cax, ticks=[.75, .8, .85, .90, .95, 1])
-    plt.show()
+    filename = '{}.pdf'.format('feature-correlation')
+    plt.savefig(filename)
 
 
 def _get_parser():
