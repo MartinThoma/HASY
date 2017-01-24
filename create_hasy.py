@@ -7,6 +7,7 @@ import csv
 import json
 import os
 import sys
+from math import log
 
 
 def load_csv(filepath):
@@ -24,7 +25,6 @@ def load_dataset(filepath):
     data = load_csv(filepath)
     dicts = []
     for i, row in enumerate(data):
-        row['i'] = i
         row['data'] = normalize_data(json.loads(row['data']), 32, 32)
         dicts.append(row)
     return dicts
@@ -85,10 +85,11 @@ def generate_dataset(data, symbols_dict, directory):
     print("Start generating 32x32 images for %i instances of %i symbols" %
           (len(data), len(symbols_dict)))
     labels = [('path', 'symbol_id', 'latex')]
+    format_str = "v2-{0:0%id}" % log(len(data), 10)
     for i in range(len(data)):
         if i % 1000 == 0:
             print("\t%i done" % i)
-        target_path = "%s/%s.png" % (directory, data[i]['i'])
+        target_path = "%s/%s.png" % (directory, format_str.format(i))
         draw(target_path, lines=data[i]['data'])
         labels.append((target_path,
                        data[i]['symbol_id'],
@@ -97,15 +98,15 @@ def generate_dataset(data, symbols_dict, directory):
         a = csv.writer(f, delimiter=',')
         a.writerows(labels)
 
-symbols_df = load_csv('symbols.csv')
+symbols_df = load_csv('2015-01-28-data/symbols.csv')
 symbols = {}
 for row in symbols_df:
     symbols[row['symbol_id']] = row['latex']
 
-generate_dataset(load_dataset('test-data.csv'),
-                 symbols,
-                 directory='hasy-test')
+data = load_dataset('2015-01-28-data/test-data.csv')
 print("Start loading train data...")
-generate_dataset(load_dataset('train-data.csv'),
+data = data + load_dataset('2015-01-28-data/train-data.csv')
+
+generate_dataset(data,
                  symbols,
-                 directory='hasy-train')
+                 directory='hasy-data')
