@@ -523,6 +523,33 @@ def _create_stratified_split(n_splits, data, labels):
                                          el['user_id']))
 
 
+def _count_users(csv_filepath):
+    """
+    Count the number of users who contributed to the dataset.
+
+    Parameters
+    ----------
+    csv_filepath : str
+        Path to a CSV file which points to images
+    """
+    data = _load_csv(csv_filepath)
+    user_ids = {}
+    for el in data:
+        if el['user_id'] not in user_ids:
+            user_ids[el['user_id']] = [el['path']]
+        else:
+            user_ids[el['user_id']].append(el['path'])
+    max_els = 0
+    max_user = 0
+    for user_id, elements in user_ids.items():
+        if len(elements) > max_els:
+            max_els = len(elements)
+            max_user = user_id
+    print("Dataset has %i users." % len(user_ids))
+    print("User %s created most (%i elements, %0.2f%%)" %
+          (max_user, max_els, float(max_els) / len(data) * 100.0))
+
+
 def _get_parser():
     """Get parser object for hasy_tools.py."""
     from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
@@ -576,6 +603,12 @@ def _get_parser():
     parser.add_argument("--create_folds",
                         dest="create_folds",
                         help="Create stratified folds")
+    parser.add_argument("--count-users",
+                        dest="count_users",
+                        action="store_true",
+                        default=False,
+                        help="Count how many different users have created "
+                             "the dataset")
     return parser
 
 
@@ -604,3 +637,5 @@ if __name__ == "__main__":
         data = _load_csv(args.dataset)
         labels = [el['symbol_id'] for el in data]
         _create_stratified_split(int(args.create_folds), data, labels)
+    if args.count_users:
+        _count_users(csv_filepath=args.dataset)
