@@ -482,13 +482,15 @@ def _analyze_correlation(csv_filepath):
     # Also set the float format here
     ax1.set_xticks(ticks)
     ax1.set_yticks(ticks)
+    labels = ax1.get_xticklabels()
+    plt.setp(labels, rotation=30)
 
     cmap = cm.get_cmap('jet', 30)
     cax = ax1.imshow(df.corr(), interpolation="nearest", cmap=cmap)
     ax1.grid(True)
     # Add colorbar, make sure to specify tick locations to match desired
     # ticklabels
-    fig.colorbar(cax, ticks=[.75, .8, .85, .90, .95, 1])
+    fig.colorbar(cax, ticks=[-0.15, 0, 0.15, 0.30, 0.45, 0.60, 0.75, 0.90, 1])
     filename = '{}.pdf'.format('feature-correlation')
     plt.savefig(filename)
 
