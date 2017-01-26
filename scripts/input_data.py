@@ -102,7 +102,8 @@ class DataSet(object):
         return self._images[start:end], self._labels[start:end]
 
 
-def read_data_sets(train_dir,
+def read_data_sets(train_labels_csv,
+                   test_labels_csv,
                    fake_data=False,
                    one_hot=False,
                    dtype=dtypes.float32,
@@ -120,12 +121,10 @@ def read_data_sets(train_dir,
         test = fake()
         return base.Datasets(train=train, validation=validation, test=test)
 
-    symbol_id2index = generate_index('HASYv2/')
-    test_images, test_labels = load_images(train_dir,
-                                           'hasy-test-labels.csv',
+    symbol_id2index = generate_index('../symbols.csv')
+    test_images, test_labels = load_images(test_labels_csv,
                                            symbol_id2index)
-    train_images, train_labels = load_images(train_dir,
-                                             'hasy-train-labels.csv',
+    train_images, train_labels = load_images(train_labels_csv,
                                              symbol_id2index)
 
     if not 0 <= validation_size <= len(train_images):

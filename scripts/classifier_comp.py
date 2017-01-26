@@ -216,16 +216,33 @@ def analyze(clf, data, fit_time, clf_name='', handle=None):
         predicted = np.append(predicted, predicted_single)
     t1 = time.time()
     results['testing_time'] = t1 - t0
-    handle.write("Classifier: %s\n" % clf_name)
-    handle.write("Training time: %0.4fs\n" % fit_time)
-    handle.write("Testing time: %0.4fs\n" % results['testing_time'])
-    handle.write("Confusion matrix:\n")
-    for row in (metrics.confusion_matrix(data['test']['y'],
-                                         predicted)).tolist():
-        handle.write("%s\n" % row)
+    results['fit_time'] = fit_time
     results['accuracy'] = metrics.accuracy_score(data['test']['y'], predicted)
-    handle.write("Accuracy: %0.4f\n" % results['accuracy'])
+    cm = (metrics.confusion_matrix(data['test']['y'], predicted)).tolist()
+    write_analyzation_results(handle, clf_name, results, cm)
     return results
+
+
+def write_analyzation_results(handle, clf_name, results, cm):
+    """
+    Write classifier results to open file handle.
+
+    Parameters
+    ----------
+    handle : opened file
+    clf_name : str
+    results : dict
+        keys: 'fit_time', 'testing_time', 'accuracy'
+    """
+    handle.write("Classifier: %s\n" % clf_name)
+    handle.write("Accuracy: %0.4f\n" % results['accuracy'] * 100)
+    handle.write("Testing time: %0.4fs\n" % results['testing_time'])
+    handle.write("Training time: %0.4fs\n" % results['fit_time'])
+    handle.write("Confusion matrix:\n")
+    for row in cm:
+        handle.write("%s\n" % row)
+    handle.write("#" * 80)
+    handle.write("\n")
 
 
 def view_image(image, label=""):

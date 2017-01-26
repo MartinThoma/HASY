@@ -3,6 +3,8 @@
 """HASY with Tensorflow."""
 
 import input_data
+from classifier_comp import write_analyzation_results
+
 import tensorflow as tf
 import tflearn
 import tflearn.utils as utils
@@ -12,9 +14,10 @@ from tensorflow.python.training import moving_averages
 
 import os
 import numpy as np
+import time
 
-epochs = 200000
-MODEL_NAME = '3-48-64-128-369'
+epochs = 100000  # 200000
+MODEL_NAME = '3-369'
 model_checkpoint_path = 'checkpoints/hasy_%s_model.ckpt' % MODEL_NAME
 
 
@@ -68,106 +71,95 @@ def get_nonexisting_path(model_checkpoint_path):
             gen_filename = os.path.join(folder, "%s-%i%s" % (filename, i, ext))
         return gen_filename
 
+for fold in range(1, 11):
+    directory = '../10-fold-cross-validation/fold-%i/' % fold
+    hasy = input_data.read_data_sets(os.path.join(directory, 'train.csv'),
+                                     os.path.join(directory, 'test.csv'),
+                                     one_hot=True)
+    results = {}
 
-hasy = input_data.read_data_sets('HASYv2', one_hot=True)
+    with tf.Session() as sess:
+        x = tf.placeholder(tf.float32, shape=[None, 1024])
+        y_ = tf.placeholder(tf.float32, shape=[None, 369])
+        net = tf.reshape(x, [-1, 32, 32, 1])
+        # net = tflearn.layers.conv.conv_2d(net,
+        #                                   nb_filter=48,
+        #                                   filter_size=3,
+        #                                   activation='relu',
+        #                                   strides=1,
+        #                                   weight_decay=0.0)
+        # net = tflearn.layers.conv.max_pool_2d(net,
+        #                                       kernel_size=2,
+        #                                       strides=2,
+        #                                       padding='same',
+        #                                       name='MaxPool2D')
+        # net = tflearn.layers.conv.conv_2d(net,
+        #                                   nb_filter=64,
+        #                                   filter_size=3,
+        #                                   activation='relu',
+        #                                   strides=1,
+        #                                   weight_decay=0.0)
+        # net = tflearn.layers.conv.max_pool_2d(net,
+        #                                       kernel_size=2,
+        #                                       strides=2,
+        #                                       padding='same',
+        #                                       name='MaxPool2D')
+        # net = tflearn.layers.conv.conv_2d(net,
+        #                                   nb_filter=128,
+        #                                   filter_size=3,
+        #                                   activation='relu',
+        #                                   strides=1,
+        #                                   weight_decay=0.0)
+        # net = tflearn.layers.conv.max_pool_2d(net,
+        #                                       kernel_size=2,
+        #                                       strides=2,
+        #                                       padding='same',
+        #                                       name='MaxPool2D')
+        net = tflearn.layers.core.flatten(net, name='Flatten')
+        y_conv = tflearn.layers.core.fully_connected(net, 369,
+                                                     activation='softmax',
+                                                     weights_init='truncated_normal',
+                                                     bias_init='zeros',
+                                                     regularizer=None,
+                                                     weight_decay=0)
 
-with tf.Session() as sess:
-    x = tf.placeholder(tf.float32, shape=[None, 1024])
-    y_ = tf.placeholder(tf.float32, shape=[None, 369])
-    net = tf.reshape(x, [-1, 32, 32, 1])
-    # net = batch_norm(net)
-    # net = tflearn.layers.normalization.batch_normalization(net,
-    #                                                        beta=0.0,
-    #                                                        gamma=1.0,
-    #                                                        epsilon=1e-05,
-    #                                                        decay=0.9,
-    #                                                        stddev=0.002,
-    #                                                        trainable=True)
-    net = tflearn.layers.conv.conv_2d(net,
-                                      nb_filter=48,
-                                      filter_size=3,
-                                      activation='relu',
-                                      strides=1,
-                                      weight_decay=0.0)
-    net = tflearn.layers.conv.max_pool_2d(net,
-                                          kernel_size=2,
-                                          strides=2,
-                                          padding='same',
-                                          name='MaxPool2D')
-    # net = tflearn.layers.normalization.batch_normalization(net,
-    #                                                        beta=0.0,
-    #                                                        gamma=1.0,
-    #                                                        epsilon=1e-05,
-    #                                                        decay=0.9,
-    #                                                        stddev=0.002,
-    #                                                        trainable=True)
-    net = tflearn.layers.conv.conv_2d(net,
-                                      nb_filter=64,
-                                      filter_size=3,
-                                      activation='relu',
-                                      strides=1,
-                                      weight_decay=0.0)
-    net = tflearn.layers.conv.max_pool_2d(net,
-                                          kernel_size=2,
-                                          strides=2,
-                                          padding='same',
-                                          name='MaxPool2D')
-    net = tflearn.layers.conv.conv_2d(net,
-                                      nb_filter=128,
-                                      filter_size=3,
-                                      activation='relu',
-                                      strides=1,
-                                      weight_decay=0.0)
-    net = tflearn.layers.conv.max_pool_2d(net,
-                                          kernel_size=2,
-                                          strides=2,
-                                          padding='same',
-                                          name='MaxPool2D')
-    net = tflearn.layers.core.flatten(net, name='Flatten')
-    y_conv = tflearn.layers.core.fully_connected(net, 369,
-                                                 activation='softmax',
-                                                 weights_init='truncated_normal',
-                                                 bias_init='zeros',
-                                                 regularizer=None,
-                                                 weight_decay=0)
+        # for op in y_conv.get_operations():
+        #     flops = ops.get_stats_for_node_def(g, op.node_def, 'flops').value
+        #     print("FLOPS: %s" % str(flops))
 
-    # for op in y_conv.get_operations():
-    #     flops = ops.get_stats_for_node_def(g, op.node_def, 'flops').value
-    #     print("FLOPS: %s" % str(flops))
+        total_parameters = 0
+        for variable in tf.trainable_variables():
+            # shape is an array of tf.Dimension
+            shape = variable.get_shape()
+            print("    shape: %s" % str(shape))
+            variable_parametes = 1
+            for dim in shape:
+                variable_parametes *= dim.value
+            print("    variable_parametes: %i" % variable_parametes)
+            total_parameters += variable_parametes
+            print("    ---")
+        print("total_parameters: %i" % total_parameters)
 
-    total_parameters = 0
-    for variable in tf.trainable_variables():
-        # shape is an array of tf.Dimension
-        shape = variable.get_shape()
-        print("    shape: %s" % str(shape))
-        variable_parametes = 1
-        for dim in shape:
-            variable_parametes *= dim.value
-        print("    variable_parametes: %i" % variable_parametes)
-        total_parameters += variable_parametes
-        print("    ---")
-    print("total_parameters: %i" % total_parameters)
+        cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(y_conv + 10**(-7)),
+                                                      reduction_indices=[1]))
+        train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
+        correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(y_, 1))
+        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+        tf.summary.scalar("training_accuracy", accuracy)
+        tf.summary.scalar("loss", cross_entropy)
 
-    cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(y_conv + 10**(-7)),
-                                                  reduction_indices=[1]))
-    train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
-    correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(y_, 1))
-    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-    tf.summary.scalar("training_accuracy", accuracy)
-    tf.summary.scalar("loss", cross_entropy)
+        # Add ops to save and restore all the variables.
+        saver = tf.train.Saver()
+        summary_writer = tf.summary.FileWriter('summary_dir', sess.graph)
 
-    # Add ops to save and restore all the variables.
-    saver = tf.train.Saver()
-    summary_writer = tf.summary.FileWriter('summary_dir', sess.graph)
-
-    sess.run(tf.global_variables_initializer())
-    model_checkpoint_path = get_nonexisting_path(model_checkpoint_path)
-    validation_curve_path = get_nonexisting_path('validation-curves/validation'
-                                                 '-curve-accuracy-%s.csv' %
-                                                 MODEL_NAME)
-    print("model_checkpoint_path: %s" % model_checkpoint_path)
-    print("validation_curve_path: %s" % validation_curve_path)
-    if not os.path.isfile(model_checkpoint_path):
+        sess.run(tf.global_variables_initializer())
+        model_checkpoint_path = get_nonexisting_path(model_checkpoint_path)
+        validation_curve_path = get_nonexisting_path('validation-curves/validation'
+                                                     '-curve-accuracy-%s.csv' %
+                                                     MODEL_NAME)
+        print("model_checkpoint_path: %s" % model_checkpoint_path)
+        print("validation_curve_path: %s" % validation_curve_path)
+        t0 = time.time()
         for i in range(epochs):
             batch = hasy.train.next_batch(50)
             if i % 100 == 0:
@@ -178,29 +170,45 @@ with tf.Session() as sess:
                                       y_: batch[1],
                                       # keep_prob: 0.5
                                       })
+        t1 = time.time()
+        results['fit_time'] = t1 - t0
 
         log_score(sess, summary_writer, validation_curve_path,
                   hasy, correct_prediction, epochs)
 
+        # Evaluate model
+        print("Evaluate model")
+        cm = np.zeros((369, 369), dtype=int)
+        t0 = time.time()
+        batch_size = 128
+        loops = int(len(hasy.test.images) / batch_size)
+        if loops * batch_size < len(hasy.test.images):
+            loops += 1
+        print(hasy.test.images.shape)
+        for i in range(loops):
+            data = hasy.test.images[i * batch_size:(i + 1) * batch_size]
+            data = data.reshape((-1, 1024))
+            predicted = tf.argmax(y_conv, 1).eval(feed_dict={x: data})
+            actual = np.argmax(hasy.test.labels[i * batch_size:
+                                                (i + 1) * batch_size], 1)
+            for pred, act in zip(predicted, actual):
+                cm[act][pred] += 1
+        # # Make remaining ones one by one
+        # for i in range(batch_size * loops, len(hasy.test.images)):
+        #     data = hasy.test.images[i]
+        #     predicted = tf.argmax(y_conv, 1).eval(feed_dict={x: data.reshape((-1, 1024))})[0]
+        #     actual = np.argmax(hasy.test.labels[i])
+        #     cm[act][pred] += 1
+        t1 = time.time()
+        results['testing_time'] = t1 - t0
+        results['accuracy'] = (float(sum([cm[i][i] for i in range(369)])) /
+                               len(hasy.test.images))
+        with open("cnn-comp.md", "a") as handle:
+            write_analyzation_results(handle,
+                                      'CNN %s' % MODEL_NAME,
+                                      results,
+                                      cm)
+
         # Save the variables to disk.
-        save_path = saver.save(sess, model_checkpoint_path)
-        print("Model saved in file: %s" % save_path)
-    else:
-        saver.restore(sess, model_checkpoint_path)
-        print("Model restored.")
-        # Export the conv1 features
-        with tf.variable_scope('conv1', reuse=True) as scope_conv:
-            W_conv1 = tf.get_variable('weights', shape=[5, 5, 1, 32])
-            weights = W_conv1.eval()
-            with open("conv1.weights.npz", "w") as outfile:
-                np.save(outfile, weights)
-
-        # TODO
-        for i in range(hasy.train.labels.shape[0] / 1000):
-            feed_dict = {x: hasy.train.images[i * 1000:(i + 1) * 1000],
-                         y_: hasy.train.labels[i * 1000:(i + 1) * 1000],
-                         keep_prob: 1.0}
-            test_correct = correct_prediction.eval(feed_dict=feed_dict)
-
-        summary_writer.flush()
-        summary_writer.close()
+        # save_path = saver.save(sess, model_checkpoint_path)
+        # print("Model saved in file: %s" % save_path)
