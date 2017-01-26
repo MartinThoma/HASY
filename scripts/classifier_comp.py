@@ -6,14 +6,15 @@ import numpy as np
 import time
 import tensorflow as tf
 import tflearn
-from tflearn.layers.core import input_data, flatten, fully_connected
+from tflearn.layers.core import input_data, flatten, fully_connected, reshape
+from tflearn.layers.conv import conv_2d, max_pool_2d
 from tflearn.layers.estimator import regression
 from sklearn.cross_validation import train_test_split
 
 # Classifiers
 # from sklearn.neighbors import KNeighborsClassifier
 # from sklearn.svm import SVC
-# from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import DecisionTreeClassifier
 # from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 # from sklearn.ensemble import GradientBoostingClassifier
 # from sklearn.naive_bayes import GaussianNB
@@ -32,7 +33,10 @@ class CNN(object):
         self.epochs = 2 * 10**5
         self.sess = tf.Session()
         self.y_ = tf.placeholder(tf.float32, shape=[None, 369])
-        net = input_data(shape=[None, 32, 32, 1], name='input')
+        net = input_data(shape=[None, 1024], name='input')
+        net = reshape(net, new_shape=[-1, 32, 32, 1], name='reshape')
+        net = conv_2d(net, nb_filter=3, filter_size=3)
+        net = max_pool_2d(net, 2)
         net = flatten(net, name='Flatten')
         net = fully_connected(net, 369,
                               activation='softmax',
@@ -63,7 +67,7 @@ class CNN(object):
         self.model = tflearn.DNN(self.net, tensorboard_verbose=0)
         self.model.fit({'input': x_train}, {'target': y_train}, n_epoch=20,
                        validation_set=({'input': x_test}, {'target': y_test}),
-                       snapshot_step=100,
+                       snapshot_step=1000,
                        show_metric=True,
                        run_id='convnet_mnist')
 
@@ -75,8 +79,8 @@ def main():
     """Run experiment with multiple classifiers."""
     # Get classifiers
     classifiers = [
-        ('CNN', CNN())
-        # ('Decision Tree', DecisionTreeClassifier(max_depth=5)),
+        # ('CNN', CNN()),
+        ('Decision Tree', DecisionTreeClassifier(max_depth=5)),
         # ('Random Forest', RandomForestClassifier(n_estimators=50,
         #                                          n_jobs=10,
         #                                          max_features=50)),
@@ -248,7 +252,6 @@ def get_data(dataset='iris'):
     ----------
     dataset : str
         'iris'
-    fold : int, optional
 
     Returns
     -------
@@ -331,14 +334,20 @@ def get_data(dataset='iris'):
         symbol_id2index = ht.generate_index("%s/symbols.csv" % dataset_path)
         base_ = "%s/10-fold-cross-validation/fold" % dataset_path
         for fold in range(1, 11):
+            one_hot = False  # Only True for CNN
             x_train, y_train = ht.load_images('%s-%i/train.csv' %
                                               (base_, fold),
                                               symbol_id2index,
-                                              one_hot=False)
+                                              one_hot=one_hot)
+            # Shuffle the data
+            perm = np.arange(len(y_train))
+            np.random.shuffle(perm)
+            x_train = x_train[perm]
+            y_train = y_train[perm]
             x_test, y_test = ht.load_images('%s-%i/test.csv' %
                                             (base_, fold),
                                             symbol_id2index,
-                                            one_hot=False)
+                                            one_hot=one_hot)
             data = {'train': {'X': x_train.reshape(x_train.shape[0],
                                                    x_train.shape[1] *
                                                    x_train.shape[2]),
