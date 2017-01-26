@@ -4,34 +4,86 @@
 
 import numpy as np
 import time
+import tensorflow as tf
+import tflearn
+from tflearn.layers.core import input_data, flatten, fully_connected
+from tflearn.layers.estimator import regression
+from sklearn.cross_validation import train_test_split
 
 # Classifiers
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.svm import SVC
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
-from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.naive_bayes import GaussianNB
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
-from sklearn.neural_network import BernoulliRBM
-from sklearn.pipeline import Pipeline
-from sklearn.linear_model import LogisticRegression
-from sklearn import cross_validation
+# from sklearn.neighbors import KNeighborsClassifier
+# from sklearn.svm import SVC
+# from sklearn.tree import DecisionTreeClassifier
+# from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+# from sklearn.ensemble import GradientBoostingClassifier
+# from sklearn.naive_bayes import GaussianNB
+# from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+# from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
+# from sklearn.neural_network import BernoulliRBM
+# from sklearn.pipeline import Pipeline
+# from sklearn.linear_model import LogisticRegression
+# from sklearn import cross_validation
+
+
+class CNN(object):
+    """CNN classifier object."""
+
+    def __init__(self):
+        self.epochs = 2 * 10**5
+        self.sess = tf.Session()
+        self.y_ = tf.placeholder(tf.float32, shape=[None, 369])
+        net = input_data(shape=[None, 32, 32, 1], name='input')
+        net = flatten(net, name='Flatten')
+        net = fully_connected(net, 369,
+                              activation='softmax',
+                              weights_init='truncated_normal',
+                              bias_init='zeros',
+                              regularizer=None,
+                              weight_decay=0)
+        self.net = regression(net, optimizer='adam', learning_rate=0.01,
+                              loss='categorical_crossentropy', name='target')
+        total_parameters = 0
+        for variable in tf.trainable_variables():
+            # shape is an array of tf.Dimension
+            shape = variable.get_shape()
+            print("    shape: %s" % str(shape))
+            variable_parametes = 1
+            for dim in shape:
+                variable_parametes *= dim.value
+            print("    variable_parametes: %i" % variable_parametes)
+            total_parameters += variable_parametes
+            print("    ---")
+        print("total_parameters: %i" % total_parameters)
+
+    def fit(self, x, y):
+        """Fit the CNN to data."""
+        x_train, x_test, y_train, y_test = train_test_split(x, y,
+                                                            test_size=0.33,
+                                                            random_state=42)
+        self.model = tflearn.DNN(self.net, tensorboard_verbose=0)
+        self.model.fit({'input': x_train}, {'target': y_train}, n_epoch=20,
+                       validation_set=({'input': x_test}, {'target': y_test}),
+                       snapshot_step=100,
+                       show_metric=True,
+                       run_id='convnet_mnist')
+
+    def predict(self, data):
+        return self.model.predict(data)
 
 
 def main():
     """Run experiment with multiple classifiers."""
     # Get classifiers
     classifiers = [
-        ('Decision Tree', DecisionTreeClassifier(max_depth=5)),
-        ('Random Forest', RandomForestClassifier(n_estimators=50,
-                                                 n_jobs=10,
-                                                 max_features=50)),
-        ('AdaBoost', AdaBoostClassifier()),
-        ('Naive Bayes', GaussianNB()),
-        ('LDA', LinearDiscriminantAnalysis()),
-        ('QDA', QuadraticDiscriminantAnalysis()),
+        ('CNN', CNN())
+        # ('Decision Tree', DecisionTreeClassifier(max_depth=5)),
+        # ('Random Forest', RandomForestClassifier(n_estimators=50,
+        #                                          n_jobs=10,
+        #                                          max_features=50)),
+        # ('AdaBoost', AdaBoostClassifier()),
+        # ('Naive Bayes', GaussianNB()),
+        # ('LDA', LinearDiscriminantAnalysis()),
+        # ('QDA', QuadraticDiscriminantAnalysis()),
         # ('Random Forest 2', RandomForestClassifier(max_depth=5,
         #                                            n_estimators=10,
         #                                            max_features=1,
@@ -79,7 +131,9 @@ def main():
         # ('Gradient Boosting', GradientBoostingClassifier())
     ]
 
+    print("Start getting data.")
     data = get_data('hasy')
+    print("Got data. Start.")
 
     # Fit them all
     classifier_data = {}
@@ -106,13 +160,16 @@ def main():
                                   data[fold],
                                   t1 - t0, clf_name=clf_name, handle=f)
                 classifier_data[clf_name].append({'training_time': t1 - t0,
-                                                  'testing_time': an_data['testing_time'],
-                                                  'accuracy': an_data['accuracy']})
+                                                  'testing_time':
+                                                      an_data['testing_time'],
+                                                  'accuracy':
+                                                      an_data['accuracy']})
 
     pretty_print(classifier_data)
 
 
 def pretty_print(classifier_data):
+    """Pretty print classifier data."""
     for clf_name, clf_data in classifier_data.items():
         print("%s:" % clf_name)
         train_times = np.array([el['training_time'] for el in clf_data])
@@ -159,7 +216,8 @@ def analyze(clf, data, fit_time, clf_name='', handle=None):
     handle.write("Training time: %0.4fs\n" % fit_time)
     handle.write("Testing time: %0.4fs\n" % results['testing_time'])
     handle.write("Confusion matrix:\n")
-    for row in (metrics.confusion_matrix(data['test']['y'], predicted)).tolist():
+    for row in (metrics.confusion_matrix(data['test']['y'],
+                                         predicted)).tolist():
         handle.write("%s\n" % row)
     results['accuracy'] = metrics.accuracy_score(data['test']['y'], predicted)
     handle.write("Accuracy: %0.4f\n" % results['accuracy'])
@@ -267,7 +325,7 @@ def get_data(dataset='iris'):
                          'y': y_test}}
     elif dataset == 'hasy':
         import hasy_tools as ht
-        dataset_path = './HASYv2'
+        dataset_path = '../'
         data_complete = []
 
         symbol_id2index = ht.generate_index("%s/symbols.csv" % dataset_path)

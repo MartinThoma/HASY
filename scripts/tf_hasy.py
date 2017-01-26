@@ -123,9 +123,7 @@ with tf.Session() as sess:
                                           strides=2,
                                           padding='same',
                                           name='MaxPool2D')
-    # net = tflearn.global_avg_pool(net)
     net = tflearn.layers.core.flatten(net, name='Flatten')
-    # y_conv = tflearn.activation(net, 'softmax')
     y_conv = tflearn.layers.core.fully_connected(net, 369,
                                                  activation='softmax',
                                                  weights_init='truncated_normal',
