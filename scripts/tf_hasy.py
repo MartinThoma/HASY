@@ -3,7 +3,7 @@
 """HASY with Tensorflow."""
 
 import input_data
-from classifier_comp import write_analyzation_results
+from classifier_comp import write_analyzation_results, pretty_print
 
 import tensorflow as tf
 import tflearn
@@ -71,6 +71,8 @@ def get_nonexisting_path(model_checkpoint_path):
             gen_filename = os.path.join(folder, "%s-%i%s" % (filename, i, ext))
         return gen_filename
 
+classifier_data = {}
+classifier_data[MODEL_NAME] = []
 for fold in range(1, 11):
     directory = '../10-fold-cross-validation/fold-%i/' % fold
     hasy = input_data.read_data_sets(os.path.join(directory, 'train.csv'),
@@ -78,21 +80,22 @@ for fold in range(1, 11):
                                      one_hot=True)
     results = {}
 
+    tf.reset_default_graph()  # Don't influence the other folds
     with tf.Session() as sess:
         x = tf.placeholder(tf.float32, shape=[None, 1024])
         y_ = tf.placeholder(tf.float32, shape=[None, 369])
         net = tf.reshape(x, [-1, 32, 32, 1])
-        # net = tflearn.layers.conv.conv_2d(net,
-        #                                   nb_filter=48,
-        #                                   filter_size=3,
-        #                                   activation='relu',
-        #                                   strides=1,
-        #                                   weight_decay=0.0)
-        # net = tflearn.layers.conv.max_pool_2d(net,
-        #                                       kernel_size=2,
-        #                                       strides=2,
-        #                                       padding='same',
-        #                                       name='MaxPool2D')
+        net = tflearn.layers.conv.conv_2d(net,
+                                          nb_filter=32,
+                                          filter_size=3,
+                                          activation='relu',
+                                          strides=1,
+                                          weight_decay=0.0)
+        net = tflearn.layers.conv.max_pool_2d(net,
+                                              kernel_size=2,
+                                              strides=2,
+                                              padding='same',
+                                              name='MaxPool2D')
         # net = tflearn.layers.conv.conv_2d(net,
         #                                   nb_filter=64,
         #                                   filter_size=3,
@@ -193,22 +196,22 @@ for fold in range(1, 11):
                                                 (i + 1) * batch_size], 1)
             for pred, act in zip(predicted, actual):
                 cm[act][pred] += 1
-        # # Make remaining ones one by one
-        # for i in range(batch_size * loops, len(hasy.test.images)):
-        #     data = hasy.test.images[i]
-        #     predicted = tf.argmax(y_conv, 1).eval(feed_dict={x: data.reshape((-1, 1024))})[0]
-        #     actual = np.argmax(hasy.test.labels[i])
-        #     cm[act][pred] += 1
         t1 = time.time()
         results['testing_time'] = t1 - t0
         results['accuracy'] = (float(sum([cm[i][i] for i in range(369)])) /
                                len(hasy.test.images))
+        classifier_data[MODEL_NAME].append({'training_time':
+                                            results['fit_time'],
+                                            'testing_time':
+                                                results['testing_time'],
+                                            'accuracy':
+                                                results['accuracy']})
         with open("cnn-comp.md", "a") as handle:
             write_analyzation_results(handle,
                                       'CNN %s' % MODEL_NAME,
                                       results,
                                       cm)
-
-        # Save the variables to disk.
-        # save_path = saver.save(sess, model_checkpoint_path)
-        # print("Model saved in file: %s" % save_path)
+    pretty_print(classifier_data)
+    # Save the variables to disk.
+    # save_path = saver.save(sess, model_checkpoint_path)
+    # print("Model saved in file: %s" % save_path)

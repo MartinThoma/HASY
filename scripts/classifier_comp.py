@@ -235,7 +235,7 @@ def write_analyzation_results(handle, clf_name, results, cm):
         keys: 'fit_time', 'testing_time', 'accuracy'
     """
     handle.write("Classifier: %s\n" % clf_name)
-    handle.write("Accuracy: %0.4f\n" % results['accuracy'] * 100)
+    handle.write("Accuracy: %0.4f\n" % (results['accuracy'] * 100))
     handle.write("Testing time: %0.4fs\n" % results['testing_time'])
     handle.write("Training time: %0.4fs\n" % results['fit_time'])
     handle.write("Confusion matrix:\n")
