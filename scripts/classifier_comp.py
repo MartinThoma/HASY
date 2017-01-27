@@ -349,7 +349,7 @@ def get_data(dataset='iris'):
         data_complete = []
 
         symbol_id2index = ht.generate_index("%s/symbols.csv" % dataset_path)
-        base_ = "%s/10-fold-cross-validation/fold" % dataset_path
+        base_ = "%s/classification-task/fold" % dataset_path
         for fold in range(1, 11):
             one_hot = False  # Only True for CNN
             x_train, y_train = ht.load_images('%s-%i/train.csv' %

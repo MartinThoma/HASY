@@ -148,8 +148,8 @@ def _is_valid_png(filepath):
 
 def _verify_all():
     """Verify all PNG files in the training and test directories."""
-    for csv_data_path in ['10-fold-cross-validation/fold-1/test.csv',
-                          '10-fold-cross-validation/fold-1/train.csv']:
+    for csv_data_path in ['classification-task/fold-1/test.csv',
+                          'classification-task/fold-1/train.csv']:
         train_data = _load_csv(csv_data_path)
         for data_item in train_data:
             if not _is_valid_png(data_item['path']):
@@ -499,7 +499,7 @@ def _create_stratified_split(n_splits, data, labels):
     from sklearn.cross_validation import StratifiedKFold
     skf = StratifiedKFold(labels, n_folds=n_splits)
     i = 1
-    kdirectory = '10-fold-cross-validation'
+    kdirectory = 'classification-task'
     if not os.path.exists(kdirectory):
             os.makedirs(kdirectory)
     for train_index, test_index in skf:
@@ -559,7 +559,7 @@ def _get_parser():
                             formatter_class=ArgumentDefaultsHelpFormatter)
     parser.add_argument("--dataset",
                         dest="dataset",
-                        default='10-fold-cross-validation/fold-1/train.csv',
+                        default='classification-task/fold-1/train.csv',
                         help="specify which data to use")
     parser.add_argument("--verify",
                         dest="verify",

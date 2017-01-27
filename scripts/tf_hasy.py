@@ -74,7 +74,7 @@ def get_nonexisting_path(model_checkpoint_path):
 classifier_data = {}
 classifier_data[MODEL_NAME] = []
 for fold in range(1, 11):
-    directory = '../10-fold-cross-validation/fold-%i/' % fold
+    directory = '../classification-task/fold-%i/' % fold
     hasy = input_data.read_data_sets(os.path.join(directory, 'train.csv'),
                                      os.path.join(directory, 'test.csv'),
                                      one_hot=True)
