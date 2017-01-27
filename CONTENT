@@ -1,0 +1,7 @@
+classification-task/
+hasy-data/
+verification-task/
+hasy-data-labels.csv
+hasy_tools.py
+README.txt
+symbols.csv
