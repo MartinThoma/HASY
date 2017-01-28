@@ -237,6 +237,15 @@ def data_by_class(data):
 
 
 def _get_color_statistics(csv_filepath, verbose=False):
+    """
+    Count how often white / black is in the image.
+
+    Parameters
+    ----------
+    csv_filepath : str
+        'test.csv' or 'train.csv'
+    verbose : bool, optional
+    """
     symbolid2latex = _get_symbolid2latex()
     data = _load_csv(csv_filepath)
     black_level, classes = [], []
@@ -261,6 +270,7 @@ def _get_color_statistics(csv_filepath, verbose=False):
 
 
 def _get_symbolid2latex(csv_filepath='symbols.csv'):
+    """Return a dict mapping symbol_ids to LaTeX code."""
     symbol_data = _load_csv(csv_filepath)
     symbolid2latex = {}
     for row in symbol_data:
@@ -370,6 +380,7 @@ def _get_euclidean_dist(e1, e2):
 
 
 def _inner_class_distance(data):
+    """Measure the eucliden distances of one class to the mean image."""
     distances = []
     mean_img = None
     for e1 in data:
@@ -431,6 +442,7 @@ def _analyze_distances(csv_filepath):
 
 
 def _analyze_variance(csv_filepath):
+    """Calculate the variance of each pixel."""
     symbol_id2index = generate_index(csv_filepath)
     data, y = load_images(csv_filepath, symbol_id2index, one_hot=False)
     # Calculate mean
@@ -496,8 +508,20 @@ def _analyze_correlation(csv_filepath):
     plt.savefig(filename)
 
 
-def _create_stratified_split(n_splits, data, labels):
+def _create_stratified_split(csv_filepath, n_splits):
+    """
+    Create a stratified split for the classification task.
+
+    Parameters
+    ----------
+    csv_filepath : str
+        Path to a CSV file which points to images
+    n_splits : int
+        Number of splits to make
+    """
     from sklearn.cross_validation import StratifiedKFold
+    data = _load_csv(csv_filepath)
+    labels = [el['symbol_id'] for el in data]
     skf = StratifiedKFold(labels, n_folds=n_splits)
     i = 1
     kdirectory = 'classification-task'
@@ -743,9 +767,7 @@ if __name__ == "__main__":
     if args.correlation:
         _analyze_correlation(csv_filepath=args.dataset)
     if args.create_folds:
-        data = _load_csv(args.dataset)
-        labels = [el['symbol_id'] for el in data]
-        _create_stratified_split(int(args.create_folds), data, labels)
+        _create_stratified_split(args.dataset, int(args.create_folds))
     if args.count_users:
         _count_users(csv_filepath=args.dataset)
     if args.create_verification_task:

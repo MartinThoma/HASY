@@ -86,15 +86,15 @@ def generate_dataset(data, symbols_dict, directory):
           (len(data), len(symbols_dict)))
     labels = [('path', 'symbol_id', 'latex', 'user_id')]
     format_str = "v2-{0:0%id}" % log(len(data), 10)
-    for i in range(len(data)):
+    for i, el in enumerate(data):
         if i % 1000 == 0:
             print("\t%i done" % i)
         target_path = "%s/%s.png" % (directory, format_str.format(i))
-        draw(target_path, lines=data[i]['data'])
+        draw(target_path, lines=el['data'])
         labels.append((target_path,
-                       data[i]['symbol_id'],
-                       symbols_dict[data[i]['symbol_id']],
-                       data[i]['user_id']))
+                       el['symbol_id'],
+                       symbols_dict[el['symbol_id']],
+                       el['user_id']))
     with open('%s-labels.csv' % directory, 'w') as f:
         a = csv.writer(f, delimiter=',')
         a.writerows(labels)

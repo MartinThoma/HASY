@@ -148,20 +148,20 @@ def main():
             f.write("#" * 80)
             f.write("\n")
             f.write("Start fitting '%s' classifier.\n" % clf_name)
-            for fold in range(len(data)):
-                print(data[fold]['test']['X'].shape)
-                print(data[fold]['test']['y'].shape)
+            for fold in data:
+                print(fold['test']['X'].shape)
+                print(fold['test']['y'].shape)
 
                 print("Got %i training samples and %i test samples." %
-                      (len(data[fold]['train']['X']),
-                       len(data[fold]['test']['X'])))
+                      (len(fold['train']['X']),
+                       len(fold['test']['X'])))
                 t0 = time.time()
                 examples = 10**9
-                clf.fit(data[fold]['train']['X'][:examples],
-                        data[fold]['train']['y'][:examples])
+                clf.fit(fold['train']['X'][:examples],
+                        fold['train']['y'][:examples])
                 t1 = time.time()
                 an_data = analyze(clf,
-                                  data[fold],
+                                  fold,
                                   t1 - t0, clf_name=clf_name, handle=f)
                 classifier_data[clf_name].append({'training_time': t1 - t0,
                                                   'testing_time':
