@@ -653,6 +653,7 @@ def _count_users(csv_filepath):
 
 def _get_parser():
     """Get parser object for hasy_tools.py."""
+    import argparse
     from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
     parser = ArgumentParser(description=__doc__,
                             formatter_class=ArgumentDefaultsHelpFormatter)
@@ -705,12 +706,12 @@ def _get_parser():
                         dest="create_folds",
                         action="store_true",
                         default=False,
-                        help="Create stratified folds")
+                        help=argparse.SUPPRESS)
     parser.add_argument("--create-verification-task",
                         dest="create_verification_task",
                         action="store_true",
                         default=False,
-                        help="Create verification task")
+                        help=argparse.SUPPRESS)
     parser.add_argument("--count-users",
                         dest="count_users",
                         action="store_true",
