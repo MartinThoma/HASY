@@ -14,6 +14,7 @@ import os
 import random
 from PIL import Image, ImageDraw
 import sys
+from sklearn.cross_validation import train_test_split
 
 import numpy as np
 import scipy.ndimage
@@ -510,7 +511,6 @@ def _create_stratified_split(n_splits, data, labels):
         else:
             print("Directory '%s' already exists. Please remove it." %
                   directory)
-        # print("TRAIN:", train_index, "TEST:", test_index)
         i += 1
         train = [data[el] for el in train_index]
         test_ = [data[el] for el in test_index]
@@ -523,6 +523,105 @@ def _create_stratified_split(n_splits, data, labels):
                                          el['symbol_id'],
                                          el['latex'],
                                          el['user_id']))
+
+
+def _create_pair(r1_data, r2_data):
+    """Create a pair for the verification test."""
+    symbol_index = random.choice(r1_data.keys())
+    r1 = random.choice(r1_data[symbol_index])
+    is_same = random.choice([True, False])
+    if is_same:
+        symbol_index2 = symbol_index
+        r2 = random.choice(r1_data[symbol_index2])
+    else:
+        symbol_index2 = random.choice(r2_data.keys())
+        while symbol_index2 == symbol_index:
+            symbol_index2 = random.choice(r2_data.keys())
+        r2 = random.choice(r2_data[symbol_index2])
+    return (r1['path'], r2['path'], is_same)
+
+
+def _create_verification_task(sample_size=32, test_size=0.05):
+    """
+    Create the datasets for the verification task.
+
+    Parameters
+    ----------
+    sample_size : int
+        Number of classes which will be taken completely
+    test_size : float in (0, 1)
+        Percentage of the remaining data to be taken to test
+    """
+    # Get the data
+    data = _load_csv('hasy-data-labels.csv')
+    for el in data:
+        el['path'] = "../hasy-data/" + el['path'].split("hasy-data/")[1]
+    data = sorted(data_by_class(data).items(),
+                  key=lambda n: len(n[1]),
+                  reverse=True)
+    symbolid2latex = _get_symbolid2latex()
+
+    # Get complete classes
+    random.seed(1337)
+    symbols = random.sample(range(len(data)), k=sample_size)
+    symbols = sorted(symbols, reverse=True)
+    test_data_excluded = []
+    for symbol_index in symbols:
+        # for class_label, items in data:
+        class_label, items = data.pop(symbol_index)
+        test_data_excluded += items
+        print(symbolid2latex[class_label])
+
+    # Get data from remaining classes
+    data_n = []
+    for class_label, items in data:
+        data_n = data_n + items
+    ys = [el['symbol_id'] for el in data_n]
+    x_train, x_test, y_train, y_test = train_test_split(data_n,
+                                                        ys,
+                                                        test_size=test_size)
+
+    # Write the training / test data
+    print("Test data (excluded symbols) = %i" % len(test_data_excluded))
+    print("Test data (included symbols) = %i" % len(x_test))
+    print("Test data (total) = %i" % (len(x_test) + len(test_data_excluded)))
+    kdirectory = 'verification-task'
+    if not os.path.exists(kdirectory):
+        os.makedirs(kdirectory)
+    with open("%s/train.csv" % kdirectory, 'wb') as csv_file:
+        csv_writer = csv.writer(csv_file)
+        csv_writer.writerow(('path', 'symbol_id', 'latex', 'user_id'))
+        for el in x_train:
+            csv_writer.writerow((el['path'],
+                                 el['symbol_id'],
+                                 el['latex'],
+                                 el['user_id']))
+
+    x_test_inc_class = data_by_class(x_test)
+    x_text_exc_class = data_by_class(test_data_excluded)
+    # V1: Both symbols belong to the training set (included symbols)
+    with open("%s/test-v1.csv" % kdirectory, 'wb') as csv_file:
+        csv_writer = csv.writer(csv_file)
+        csv_writer.writerow(('path1', 'path2', 'is_same'))
+        for i in range(100000):
+            test_data_tuple = _create_pair(x_test_inc_class, x_test_inc_class)
+            csv_writer.writerow(test_data_tuple)
+
+    # V2: r1 belongs to a symbol in the training set, but r2 might not
+    with open("%s/test-v2.csv" % kdirectory, 'wb') as csv_file:
+        csv_writer = csv.writer(csv_file)
+        csv_writer.writerow(('path1', 'path2', 'is_same'))
+        for i in range(100000):
+            test_data_tuple = _create_pair(x_test_inc_class, x_text_exc_class)
+            csv_writer.writerow(test_data_tuple)
+
+    # V3: r1 and r2 both don't belong to symbols in the training set
+    with open("%s/test-v3.csv" % kdirectory, 'wb') as csv_file:
+        csv_writer = csv.writer(csv_file)
+        csv_writer.writerow(('path1', 'path2', 'is_same'))
+        for i in range(100000):
+            test_data_tuple = _create_pair(x_text_exc_class, x_text_exc_class)
+            csv_writer.writerow(test_data_tuple)
 
 
 def _count_users(csv_filepath):
@@ -602,9 +701,16 @@ def _get_parser():
                         action="store_true",
                         default=False,
                         help="Analyze the correlation of features")
-    parser.add_argument("--create_folds",
+    parser.add_argument("--create-classification-task",
                         dest="create_folds",
+                        action="store_true",
+                        default=False,
                         help="Create stratified folds")
+    parser.add_argument("--create-verification-task",
+                        dest="create_verification_task",
+                        action="store_true",
+                        default=False,
+                        help="Create verification task")
     parser.add_argument("--count-users",
                         dest="count_users",
                         action="store_true",
@@ -641,3 +747,5 @@ if __name__ == "__main__":
         _create_stratified_split(int(args.create_folds), data, labels)
     if args.count_users:
         _count_users(csv_filepath=args.dataset)
+    if args.create_verification_task:
+        _create_verification_task()
