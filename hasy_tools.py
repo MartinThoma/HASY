@@ -10,6 +10,7 @@ in the interactive Python shell for the module options of hasy_tools.
 
 import logging
 import csv
+import json
 import os
 import random
 from PIL import Image, ImageDraw
@@ -279,8 +280,8 @@ def _get_symbolid2latex(csv_filepath='symbols.csv'):
 
 
 def _analyze_class_distribution(csv_filepath,
-                                max_data=1000,
-                                bin_size=25):
+                                max_data,
+                                bin_size):
     """Plot the distribution of training data over graphs."""
     symbol_id2index = generate_index(csv_filepath)
     index2symbol_id = {}
@@ -311,7 +312,7 @@ def _analyze_class_distribution(csv_filepath,
     plt.ylabel('Number of classes')
 
     # Where we want the ticks, in pixel locations
-    ticks = [int(el) for el in list(np.linspace(0, 200, 21))]
+    ticks = [int(el) for el in list(np.linspace(0, max_data, 21))]
     # What those pixel locations correspond to in data coordinates.
     # Also set the float format here
     ax1.set_xticks(ticks)
@@ -675,6 +676,89 @@ def _count_users(csv_filepath):
           (max_user, max_els, float(max_els) / len(data) * 100.0))
 
 
+def _analyze_cm(cm_file, total_symbols=100):
+    """
+    Analyze a confusion matrix.
+
+    Parameters
+    ----------
+    cm_file : str
+        Path to a confusion matrix in JSON format.
+        Each line contains a list of non-negative integers.
+        cm[i][j] indicates how often members of class i were labeled with j
+    """
+    symbolid2latex = _get_symbolid2latex()
+    symbol_id2index = generate_index('hasy-data-labels.csv')
+    index2symbol_id = {}
+    for index, symbol_id in symbol_id2index.items():
+        index2symbol_id[symbol_id] = index
+
+    # Load CM
+    with open(cm_file) as data_file:
+        cm = json.load(data_file)
+    class_accuracy = []
+    n = len(cm)
+    test_samples_sum = np.sum(cm)
+    # Number of recordings for symbols which don't have a single correct
+    # prediction
+    sum_difficult_none = 0
+    # Number of recordings for symbols which have an accuracy of less than 5%
+    sum_difficult_five = 0
+    for i in range(n):
+        total = sum([cm[i][j] for j in range(n)])
+        class_accuracy.append({'class_index': i,
+                               'class_accuracy': float(cm[i][i]) / total,
+                               'class_confusion_index': np.argmax(cm[i]),
+                               'correct_total': cm[i][i],
+                               'class_total': total})
+    print("Lowest class accuracies:")
+    class_accuracy = sorted(class_accuracy, key=lambda n: n['class_accuracy'])
+    index2latex = lambda n: symbolid2latex[index2symbol_id[n]]
+    for i in range(total_symbols):
+        if class_accuracy[i]['correct_total'] == 0:
+            sum_difficult_none += class_accuracy[i]['class_total']
+        if class_accuracy[i]['class_accuracy'] < 0.05:
+            sum_difficult_five += class_accuracy[i]['class_total']
+        latex_orig = index2latex(class_accuracy[i]['class_index'])
+        latex_conf = index2latex(class_accuracy[i]['class_confusion_index'])
+        # print("\t%i. \t%s:\t%0.4f (%s); correct=%i" %
+        #       (i + 1,
+        #        latex_orig,
+        #        class_accuracy[i]['class_accuracy'],
+        #        latex_conf,
+        #        class_accuracy[i]['correct_total']))
+        print("\t\\verb+{:<15}+ & ${:<15}$ & {:<15} & \\verb+{:<15}+ & ${:<15}$ \\\\ ({})".format
+              (latex_orig, latex_orig,
+               class_accuracy[i]['class_total'],
+               latex_conf, latex_conf,
+               class_accuracy[i]['correct_total']))
+    print("Non-correct: %0.4f%%" % (sum_difficult_none / float(test_samples_sum)))
+    print("five-correct: %0.4f%%" % (sum_difficult_five / float(test_samples_sum)))
+
+    print("Easy classes")
+    class_accuracy = sorted(class_accuracy,
+                            key=lambda n: n['class_accuracy'],
+                            reverse=True)
+    for i in range(total_symbols):
+        latex_orig = index2latex(class_accuracy[i]['class_index'])
+        latex_conf = index2latex(class_accuracy[i]['class_confusion_index'])
+        if class_accuracy[i]['class_accuracy'] < 0.99:
+            break
+        # print("\t%i. \t%s:\t%0.4f (%s); correct=%i" %
+        #       (i + 1,
+        #        latex_orig,
+        #        class_accuracy[i]['class_accuracy'],
+        #        latex_conf,
+        #        class_accuracy[i]['correct_total']))
+        print("\t\\verb+{:<15}+ & ${:<15}$ & {:<15} & \\verb+{:<15}+ & ${:<15}$ \\\\ ({})".format
+              (latex_orig, latex_orig,
+               class_accuracy[i]['class_total'],
+               latex_conf, latex_conf,
+               class_accuracy[i]['correct_total']))
+    # cm = np.array(cm)
+    # scipy.misc.imshow(cm)
+
+
 def _get_parser():
     """Get parser object for hasy_tools.py."""
     import argparse
@@ -742,6 +826,10 @@ def _get_parser():
                         default=False,
                         help="Count how many different users have created "
                              "the dataset")
+    parser.add_argument("--analyze-cm",
+                        dest="cm",
+                        default=False,
+                        help="Analyze a confusion matrix in JSON format.")
     return parser
 
 
@@ -756,8 +844,8 @@ if __name__ == "__main__":
         _get_color_statistics(csv_filepath=args.dataset)
     if args.class_distribution:
         _analyze_class_distribution(csv_filepath=args.dataset,
-                                    max_data=200,
-                                    bin_size=5)
+                                    max_data=1000,
+                                    bin_size=25)
     if args.pca:
         _analyze_pca(csv_filepath=args.dataset)
     if args.distances:
@@ -772,3 +860,5 @@ if __name__ == "__main__":
         _count_users(csv_filepath=args.dataset)
     if args.create_verification_task:
         _create_verification_task()
+    if args.cm:
+        _analyze_cm(args.cm)
