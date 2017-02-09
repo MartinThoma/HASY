@@ -27,7 +27,7 @@ logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
                     level=logging.INFO,
                     stream=sys.stdout)
 
-__version__ = "v2.1"
+__version__ = "v2.2"
 
 
 def _load_csv(filepath, delimiter=',', quotechar="'"):
@@ -204,7 +204,8 @@ def load_data(fold=1,
               dataset_path='../',
               one_hot=False,
               normalize=True,
-              shuffle=True):
+              shuffle=True,
+              flatten=True):
     """
     Load the HASY data.
 
@@ -217,6 +218,8 @@ def load_data(fold=1,
         Noramlize features to {0.0, 1.0}
     shuffle : bool, optional (default: True)
         Shuffle loaded data
+    flatten : bool, optional (default: True)
+        Flatten feature vector
 
     Returns
     -------
@@ -238,21 +241,19 @@ def load_data(fold=1,
                                             symbol_id2index,
                                             one_hot=one_hot,
                                             normalize=normalize,
-                                            shuffle=shuffle)
+                                            shuffle=shuffle,
+                                            flatten=flatten)
     x_test, y_test, s_test = load_images('%s-%i/test.csv' %
                                          (base_, fold),
                                          symbol_id2index,
                                          one_hot=one_hot,
                                          normalize=normalize,
-                                         shuffle=shuffle)
-    data = {'train': {'X': x_train.reshape(x_train.shape[0],
-                                           x_train.shape[1] *
-                                           x_train.shape[2]),
+                                         shuffle=shuffle,
+                                         flatten=flatten)
+    data = {'train': {'X': x_train,
                       'y': y_train,
                       'source': s_train},
-            'test': {'X': x_test.reshape(x_test.shape[0],
-                                         x_test.shape[1] *
-                                         x_test.shape[2]),
+            'test': {'X': x_test,
                      'y': y_test,
                      'source': s_test},
             'n_classes': 369}
