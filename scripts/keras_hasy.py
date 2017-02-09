@@ -71,7 +71,14 @@ model.compile(loss='categorical_crossentropy',
 
 model.fit(train_x, train_y, batch_size=batch_size, nb_epoch=nb_epoch,
           verbose=1, validation_data=(test_x, test_y))
-score = model.evaluate(test_x, test_y, verbose=0)
-print('Test score:', score[0])
-print('Test accuracy:', score[1])
+
+# Serialize model
 model.save('my_keras_model.h5')
+
+# Evaluate model
+score = model.evaluate(test_x, test_y, verbose=0)
+print('Test accuarcy: %0.4f%%' % (score[1] * 100))
+
+# Run the model on one example
+prediction = model.predict(test_x[0].reshape(-1, 1, img_rows, img_cols))
+print("Prediction: %s" % str(prediction[0][:3]))  # only show first 3 probas
