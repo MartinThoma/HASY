@@ -9,7 +9,7 @@ import tflearn
 from tflearn.layers.core import input_data, flatten, fully_connected, reshape
 from tflearn.layers.conv import conv_2d, max_pool_2d
 from tflearn.layers.estimator import regression
-from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
 
 # Classifiers
 # from sklearn.neighbors import KNeighborsClassifier
