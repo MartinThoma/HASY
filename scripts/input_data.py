@@ -6,11 +6,10 @@
 from hasy_tools import generate_index, load_images
 import numpy
 from six.moves import xrange
+import os
 
 from tensorflow.contrib.learn.python.learn.datasets import base
 from tensorflow.python.framework import dtypes
-
-SOURCE_URL = 'http://yann.lecun.com/exdb/mnist/'  # TODO
 
 
 class DataSet(object):
@@ -108,7 +107,8 @@ def read_data_sets(train_labels_csv,
                    one_hot=False,
                    dtype=dtypes.float32,
                    reshape=True,
-                   validation_size=5000):
+                   validation_size=5000,
+                   dataset_path='../'):
     """Read HASY data."""
     if fake_data:
 
@@ -121,11 +121,11 @@ def read_data_sets(train_labels_csv,
         test = fake()
         return base.Datasets(train=train, validation=validation, test=test)
 
-    symbol_id2index = generate_index('../symbols.csv')
-    test_images, test_labels = load_images(test_labels_csv,
-                                           symbol_id2index)
-    train_images, train_labels = load_images(train_labels_csv,
-                                             symbol_id2index)
+    symbol_id2index = generate_index(os.path.join(dataset_path, 'symbols.csv'))
+    test_images, test_labels, _ = load_images(test_labels_csv,
+                                              symbol_id2index)
+    train_images, train_labels, _ = load_images(train_labels_csv,
+                                                symbol_id2index)
 
     if not 0 <= validation_size <= len(train_images):
         raise ValueError(

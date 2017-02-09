@@ -7,9 +7,10 @@ from classifier_comp import write_analyzation_results, pretty_print
 
 import tensorflow as tf
 import tflearn
-import tflearn.utils as utils
-import tflearn.variables as vs
-from tensorflow.python.training import moving_averages
+from tflearn.layers.core import fully_connected
+# import tflearn.utils as utils
+# import tflearn.variables as vs
+# from tensorflow.python.training import moving_averages
 # from tensorflow.python.framework import ops
 
 import os
@@ -17,16 +18,18 @@ import numpy as np
 import time
 
 epochs = 100000  # 200000
-MODEL_NAME = '3-369'
+MODEL_NAME = '3-32-64-1024-1024-1024-369-prelu'
 model_checkpoint_path = 'checkpoints/hasy_%s_model.ckpt' % MODEL_NAME
 
 
 def eval_network(sess, summary_writer, dataset, correct_prediction, epoch,
                  mode, make_summary=False):
+    """Evaluate the network."""
     correct_sum = 0
     total_test = 0
     if mode == 'test' and make_summary:
-        training_summary = tf.get_default_graph().get_tensor_by_name("training_accuracy:0")
+        training_summary = (tf.get_default_graph()
+                            ).get_tensor_by_name("training_accuracy:0")
         loss_summary = tf.get_default_graph().get_tensor_by_name("loss:0")
     for i in range(dataset.labels.shape[0] / 1000):
         feed_dict = {x: dataset.images[i * 1000:(i + 1) * 1000],
@@ -35,10 +38,11 @@ def eval_network(sess, summary_writer, dataset, correct_prediction, epoch,
                      }
 
         if mode == 'test' and make_summary:
-            [test_correct, train_summ, loss_summ] = sess.run([correct_prediction,
-                                                              training_summary,
-                                                              loss_summary],
-                                                             feed_dict=feed_dict)
+            out = sess.run([correct_prediction,
+                            training_summary,
+                            loss_summary],
+                           feed_dict=feed_dict)
+            [test_correct, train_summ, loss_summ] = out
             summary_writer.add_summary(train_summ, epoch)
             summary_writer.add_summary(loss_summ, epoch)
         else:
@@ -49,6 +53,7 @@ def eval_network(sess, summary_writer, dataset, correct_prediction, epoch,
 
 
 def log_score(sess, summary_writer, filename, data, scoring, epoch):
+    """Write the score to in CSV format to a file."""
     with open(filename, "a") as myfile:
         train = eval_network(sess, summary_writer, data.train, scoring, epoch,
                              "train")
@@ -58,6 +63,7 @@ def log_score(sess, summary_writer, filename, data, scoring, epoch):
 
 
 def get_nonexisting_path(model_checkpoint_path):
+    """Get a path which no other file uses."""
     if not os.path.isfile(model_checkpoint_path):
         return model_checkpoint_path
     else:
@@ -73,10 +79,13 @@ def get_nonexisting_path(model_checkpoint_path):
 
 classifier_data = {}
 classifier_data[MODEL_NAME] = []
+dataset_path = os.path.join(os.path.expanduser("~"), 'hasy')
 for fold in range(1, 11):
-    directory = '../classification-task/fold-%i/' % fold
+    directory = os.path.join(dataset_path,
+                             'classification-task/fold-%i/' % fold)
     hasy = input_data.read_data_sets(os.path.join(directory, 'train.csv'),
                                      os.path.join(directory, 'test.csv'),
+                                     dataset_path=dataset_path,
                                      one_hot=True)
     results = {}
 
@@ -88,7 +97,7 @@ for fold in range(1, 11):
         net = tflearn.layers.conv.conv_2d(net,
                                           nb_filter=32,
                                           filter_size=3,
-                                          activation='relu',
+                                          activation='prelu',
                                           strides=1,
                                           weight_decay=0.0)
         net = tflearn.layers.conv.max_pool_2d(net,
@@ -96,35 +105,44 @@ for fold in range(1, 11):
                                               strides=2,
                                               padding='same',
                                               name='MaxPool2D')
-        # net = tflearn.layers.conv.conv_2d(net,
-        #                                   nb_filter=64,
-        #                                   filter_size=3,
-        #                                   activation='relu',
-        #                                   strides=1,
-        #                                   weight_decay=0.0)
-        # net = tflearn.layers.conv.max_pool_2d(net,
-        #                                       kernel_size=2,
-        #                                       strides=2,
-        #                                       padding='same',
-        #                                       name='MaxPool2D')
-        # net = tflearn.layers.conv.conv_2d(net,
-        #                                   nb_filter=128,
-        #                                   filter_size=3,
-        #                                   activation='relu',
-        #                                   strides=1,
-        #                                   weight_decay=0.0)
-        # net = tflearn.layers.conv.max_pool_2d(net,
-        #                                       kernel_size=2,
-        #                                       strides=2,
-        #                                       padding='same',
-        #                                       name='MaxPool2D')
+        net = tflearn.layers.conv.conv_2d(net,
+                                          nb_filter=64,
+                                          filter_size=3,
+                                          activation='prelu',
+                                          strides=1,
+                                          weight_decay=0.0)
+        net = tflearn.layers.conv.max_pool_2d(net,
+                                              kernel_size=2,
+                                              strides=2,
+                                              padding='same',
+                                              name='MaxPool2D')
         net = tflearn.layers.core.flatten(net, name='Flatten')
-        y_conv = tflearn.layers.core.fully_connected(net, 369,
-                                                     activation='softmax',
-                                                     weights_init='truncated_normal',
-                                                     bias_init='zeros',
-                                                     regularizer=None,
-                                                     weight_decay=0)
+        net = fully_connected(net, 1024,
+                              activation='tanh',
+                              weights_init='truncated_normal',
+                              bias_init='zeros',
+                              regularizer=None,
+                              weight_decay=0)
+        net = fully_connected(net, 1024,
+                              activation='tanh',
+                              weights_init='truncated_normal',
+                              bias_init='zeros',
+                              regularizer=None,
+                              weight_decay=0)
+        net = tflearn.layers.core.dropout(net, keep_prob=0.5)
+        net = fully_connected(net, 1024,
+                              activation='tanh',
+                              weights_init='truncated_normal',
+                              bias_init='zeros',
+                              regularizer=None,
+                              weight_decay=0)
+        net = tflearn.layers.core.dropout(net, keep_prob=0.5)
+        y_conv = fully_connected(net, 369,
+                                 activation='softmax',
+                                 weights_init='truncated_normal',
+                                 bias_init='zeros',
+                                 regularizer=None,
+                                 weight_decay=0)
 
         # for op in y_conv.get_operations():
         #     flops = ops.get_stats_for_node_def(g, op.node_def, 'flops').value
@@ -143,7 +161,8 @@ for fold in range(1, 11):
             print("    ---")
         print("total_parameters: %i" % total_parameters)
 
-        cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_ * tf.log(y_conv + 10**(-7)),
+        single_errors = y_ * tf.log(y_conv + 10**(-7))
+        cross_entropy = tf.reduce_mean(-tf.reduce_sum(single_errors,
                                                       reduction_indices=[1]))
         train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
         correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(y_, 1))
@@ -157,7 +176,8 @@ for fold in range(1, 11):
 
         sess.run(tf.global_variables_initializer())
         model_checkpoint_path = get_nonexisting_path(model_checkpoint_path)
-        validation_curve_path = get_nonexisting_path('validation-curves/validation'
+        validation_curve_path = get_nonexisting_path('validation-curves/'
+                                                     'validation'
                                                      '-curve-accuracy-%s.csv' %
                                                      MODEL_NAME)
         print("model_checkpoint_path: %s" % model_checkpoint_path)
@@ -165,7 +185,7 @@ for fold in range(1, 11):
         t0 = time.time()
         for i in range(epochs):
             batch = hasy.train.next_batch(50)
-            if i % 100 == 0:
+            if i % 500 == 0:
                 log_score(sess, summary_writer,
                           validation_curve_path,
                           hasy, correct_prediction, i)
