@@ -27,9 +27,10 @@ nb_epoch = 1
 # input image dimensions
 img_rows, img_cols = 32, 32
 
-# the data, shuffled and split between train and test sets
+# Load data
+fold = 1
 dataset_path = os.path.join(os.path.expanduser("~"), 'hasy')
-hasy_data = ht.load_data(normalize=True, dataset_path=dataset_path)
+hasy_data = ht.load_data(fold=fold, normalize=True, dataset_path=dataset_path)
 train_x = hasy_data['train']['X']
 train_y = hasy_data['train']['y']
 test_x = hasy_data['test']['X']
@@ -44,14 +45,11 @@ else:
     test_x = test_x.reshape(test_x.shape[0], img_rows, img_cols, 1)
     input_shape = (img_rows, img_cols, 1)
 
-print('train_x shape:', train_x.shape)
-print(train_x.shape[0], 'train samples')
-print(test_x.shape[0], 'test samples')
-
 # convert class vectors to binary class matrices
 train_y = np_utils.to_categorical(train_y, hasy_data['n_classes'])
 test_y = np_utils.to_categorical(test_y, hasy_data['n_classes'])
 
+# Define model
 model = Sequential()
 model.add(Convolution2D(32, 3, 3,
                         border_mode='same',
@@ -67,6 +65,7 @@ model.add(Dense(1024, activation='tanh'))
 model.add(Dropout(0.5))
 model.add(Dense(hasy_data['n_classes'], activation='softmax'))
 
+# Train model
 adam = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 model.compile(loss='categorical_crossentropy',
               optimizer=adam,
