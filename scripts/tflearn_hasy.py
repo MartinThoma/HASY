@@ -5,7 +5,6 @@
 import os
 import hasy_tools as ht
 
-import tensorflow as tf
 import tflearn
 from tflearn.layers.core import input_data, fully_connected, dropout, reshape
 from tflearn.layers.core import flatten
@@ -27,8 +26,6 @@ train_x = hasy_data['train']['X']
 train_y = hasy_data['train']['y']
 test_x = hasy_data['test']['X']
 test_y = hasy_data['test']['y']
-
-tf.reset_default_graph()  # Don't influence the other folds
 
 # Define model
 network = input_data(shape=[None, 1024], name='input')
