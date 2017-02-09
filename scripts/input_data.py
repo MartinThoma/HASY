@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 
-"""Load the MASYM dataset."""
+"""Load the HASY dataset."""
 
 from hasy_tools import generate_index, load_images
 import numpy
@@ -109,7 +109,7 @@ def read_data_sets(train_labels_csv,
                    dtype=dtypes.float32,
                    reshape=True,
                    validation_size=5000):
-    """Read MASYM data."""
+    """Read HASY data."""
     if fake_data:
 
         def fake():
