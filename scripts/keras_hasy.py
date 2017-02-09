@@ -15,7 +15,6 @@ import os
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Flatten
 from keras.layers import Convolution2D, MaxPooling2D
-from keras.utils import np_utils
 from keras.layers.advanced_activations import PReLU
 from keras.optimizers import Adam
 from keras import backend as K
@@ -30,7 +29,10 @@ img_rows, img_cols = 32, 32
 # Load data
 fold = 1
 dataset_path = os.path.join(os.path.expanduser("~"), 'hasy')
-hasy_data = ht.load_data(fold=fold, normalize=True, dataset_path=dataset_path)
+hasy_data = ht.load_data(fold=fold,
+                         normalize=True,
+                         one_hot=True,
+                         dataset_path=dataset_path)
 train_x = hasy_data['train']['X']
 train_y = hasy_data['train']['y']
 test_x = hasy_data['test']['X']
@@ -44,10 +46,6 @@ else:
     train_x = train_x.reshape(train_x.shape[0], img_rows, img_cols, 1)
     test_x = test_x.reshape(test_x.shape[0], img_rows, img_cols, 1)
     input_shape = (img_rows, img_cols, 1)
-
-# convert class vectors to binary class matrices
-train_y = np_utils.to_categorical(train_y, hasy_data['n_classes'])
-test_y = np_utils.to_categorical(test_y, hasy_data['n_classes'])
 
 # Define model
 model = Sequential()

@@ -11,7 +11,6 @@ from tflearn.layers.core import input_data, fully_connected, dropout, reshape
 from tflearn.layers.core import flatten
 from tflearn.layers.conv import conv_2d, max_pool_2d
 from tflearn.layers.estimator import regression
-from keras.utils import np_utils
 
 epochs = 100000  # 200000
 
@@ -20,17 +19,16 @@ dataset_path = os.path.join(os.path.expanduser("~"), 'hasy')
 # Load data
 fold = 1
 dataset_path = os.path.join(os.path.expanduser("~"), 'hasy')
-hasy_data = ht.load_data(fold=fold, normalize=True, dataset_path=dataset_path)
+hasy_data = ht.load_data(fold=fold,
+                         normalize=True,
+                         one_hot=True,
+                         dataset_path=dataset_path)
 train_x = hasy_data['train']['X']
 train_y = hasy_data['train']['y']
 test_x = hasy_data['test']['X']
 test_y = hasy_data['test']['y']
 
 tf.reset_default_graph()  # Don't influence the other folds
-
-# convert class vectors to binary class matrices
-train_y = np_utils.to_categorical(train_y, hasy_data['n_classes'])
-test_y = np_utils.to_categorical(test_y, hasy_data['n_classes'])
 
 # Define model
 network = input_data(shape=[None, 1024], name='input')
