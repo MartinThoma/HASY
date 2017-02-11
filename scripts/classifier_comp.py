@@ -4,12 +4,7 @@
 
 import numpy as np
 import time
-import tensorflow as tf
-import tflearn
-from tflearn.layers.core import input_data, flatten, fully_connected, reshape
-from tflearn.layers.conv import conv_2d, max_pool_2d
-from tflearn.layers.estimator import regression
-from sklearn.model_selection import train_test_split
+import os
 
 # Classifiers
 # from sklearn.neighbors import KNeighborsClassifier
@@ -26,60 +21,10 @@ from sklearn.tree import DecisionTreeClassifier
 # from sklearn import cross_validation
 
 
-class CNN(object):
-    """CNN classifier object."""
-
-    def __init__(self):
-        self.epochs = 2 * 10**5
-        self.sess = tf.Session()
-        self.y_ = tf.placeholder(tf.float32, shape=[None, 369])
-        net = input_data(shape=[None, 1024], name='input')
-        net = reshape(net, new_shape=[-1, 32, 32, 1], name='reshape')
-        net = conv_2d(net, nb_filter=3, filter_size=3)
-        net = max_pool_2d(net, 2)
-        net = flatten(net, name='Flatten')
-        net = fully_connected(net, 369,
-                              activation='softmax',
-                              weights_init='truncated_normal',
-                              bias_init='zeros',
-                              regularizer=None,
-                              weight_decay=0)
-        self.net = regression(net, optimizer='adam', learning_rate=0.01,
-                              loss='categorical_crossentropy', name='target')
-        total_parameters = 0
-        for variable in tf.trainable_variables():
-            # shape is an array of tf.Dimension
-            shape = variable.get_shape()
-            print("    shape: %s" % str(shape))
-            variable_parametes = 1
-            for dim in shape:
-                variable_parametes *= dim.value
-            print("    variable_parametes: %i" % variable_parametes)
-            total_parameters += variable_parametes
-            print("    ---")
-        print("total_parameters: %i" % total_parameters)
-
-    def fit(self, x, y):
-        """Fit the CNN to data."""
-        x_train, x_test, y_train, y_test = train_test_split(x, y,
-                                                            test_size=0.33,
-                                                            random_state=42)
-        self.model = tflearn.DNN(self.net, tensorboard_verbose=0)
-        self.model.fit({'input': x_train}, {'target': y_train}, n_epoch=20,
-                       validation_set=({'input': x_test}, {'target': y_test}),
-                       snapshot_step=1000,
-                       show_metric=True,
-                       run_id='convnet_mnist')
-
-    def predict(self, data):
-        return self.model.predict(data)
-
-
 def main():
     """Run experiment with multiple classifiers."""
     # Get classifiers
     classifiers = [
-        # ('CNN', CNN()),
         ('Decision Tree', DecisionTreeClassifier(max_depth=5)),
         # ('Random Forest', RandomForestClassifier(n_estimators=50,
         #                                          n_jobs=10,
@@ -149,9 +94,6 @@ def main():
             f.write("\n")
             f.write("Start fitting '%s' classifier.\n" % clf_name)
             for fold in data:
-                print(fold['test']['X'].shape)
-                print(fold['test']['y'].shape)
-
                 print("Got %i training samples and %i test samples." %
                       (len(fold['train']['X']),
                        len(fold['test']['X'])))
@@ -183,8 +125,10 @@ def pretty_print(classifier_data):
               (train_times.mean(), train_times.min(), train_times.max()))
         print("\ttest_time:\t%0.1f (min=%0.2f, max=%0.2f)" %
               (test_times.mean(), test_times.min(), test_times.max()))
-        print("\tacc:\t\t%0.4f (min=%0.4f, max=%0.4f)" %
-              (accuracy.mean(), accuracy.min(), accuracy.max()))
+        print("\tacc:\t\t%0.1f (min=%0.1f, max=%0.1f)" %
+              (accuracy.mean() * 100,
+               accuracy.min() * 100,
+               accuracy.max() * 100))
     print(classifier_data)
 
 
@@ -345,33 +289,29 @@ def get_data(dataset='iris'):
                          'y': y_test}}
     elif dataset == 'hasy':
         import hasy_tools as ht
-        dataset_path = '../'
+        dataset_path = os.path.join(os.path.expanduser("~"), 'hasy')
         data_complete = []
 
         symbol_id2index = ht.generate_index("%s/symbols.csv" % dataset_path)
         base_ = "%s/classification-task/fold" % dataset_path
         for fold in range(1, 11):
+            print("Fold %i" % fold)
             one_hot = False  # Only True for CNN
-            x_train, y_train = ht.load_images('%s-%i/train.csv' %
-                                              (base_, fold),
-                                              symbol_id2index,
-                                              one_hot=one_hot)
-            # Shuffle the data
-            perm = np.arange(len(y_train))
-            np.random.shuffle(perm)
-            x_train = x_train[perm]
-            y_train = y_train[perm]
-            x_test, y_test = ht.load_images('%s-%i/test.csv' %
-                                            (base_, fold),
-                                            symbol_id2index,
-                                            one_hot=one_hot)
-            data = {'train': {'X': x_train.reshape(x_train.shape[0],
-                                                   x_train.shape[1] *
-                                                   x_train.shape[2]),
+            x_train, y_train, s_train = ht.load_images('%s-%i/train.csv' %
+                                                       (base_, fold),
+                                                       symbol_id2index,
+                                                       one_hot=one_hot,
+                                                       flatten=True,
+                                                       shuffle=True)
+            x_test, y_test, s_test = ht.load_images('%s-%i/test.csv' %
+                                                    (base_, fold),
+                                                    symbol_id2index,
+                                                    one_hot=one_hot,
+                                                    flatten=True,
+                                                    shuffle=True)
+            data = {'train': {'X': x_train,
                               'y': y_train},
-                    'test': {'X': x_test.reshape(x_test.shape[0],
-                                                 x_test.shape[1] *
-                                                 x_test.shape[2]),
+                    'test': {'X': x_test,
                              'y': y_test},
                     'n_classes': 369}
             data_complete.append(data)
