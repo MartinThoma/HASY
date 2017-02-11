@@ -57,7 +57,7 @@ def main():
             f.write("\n")
             f.write("Start fitting '%s' classifier.\n" % clf_name)
             for fold in data:
-                tmp = max_k_samples(fold['train']['X'], fold['train']['y'], 40)
+                tmp = max_k_samples(fold['train']['X'], fold['train']['y'], 50)
                 fold['train']['X'], fold['train']['y'] = tmp
                 print("Got %i training samples and %i test samples." %
                       (len(fold['train']['X']),
