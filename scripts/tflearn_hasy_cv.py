@@ -26,7 +26,9 @@ img_rows, img_cols = 32, 32
 
 accuracies = []
 
-for fold in range(1, 4):
+for fold in range(1, 11):
+    print("#" * 80)
+    print("k = %i" % fold)
     tf.reset_default_graph()
 
     # Load data
@@ -61,7 +63,7 @@ for fold in range(1, 4):
               batch_size=batch_size)
 
     # Serialize model
-    model.save('cv-model-fold-%i.tflearn' % fold)
+    # model.save('cv-model-fold-%i.tflearn' % fold)
 
     # Evaluate model
     score = model.evaluate(test_x, test_y)
@@ -69,11 +71,7 @@ for fold in range(1, 4):
     accuracies.append(score[0])
 
 accuracies = np.array(accuracies)
-print(("CV Accuracy. mean={mean:0.2f}%%\t ({min:0.2f}%% - {max:0.2f}%%)"
-       ).format(mean=accuracies.mean()  * 100,
+print(("CV Accuracy. mean={mean:0.2f}%\t ({min:0.2f}% - {max:0.2f}%)"
+       ).format(mean=accuracies.mean() * 100,
                 min=accuracies.min() * 100,
                 max=accuracies.max() * 100))
-
-# Run the model on one example
-prediction = model.predict([test_x[0]])
-print("Prediction: %s" % str(prediction[0][:3]))  # only show first 3 probas
