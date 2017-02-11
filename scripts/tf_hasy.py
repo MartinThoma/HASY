@@ -18,7 +18,7 @@ import numpy as np
 import time
 
 epochs = 100000  # 200000
-MODEL_NAME = '3-32-64-1024-1024-1024-369-prelu'
+MODEL_NAME = 'tf-cnn-prelu'
 model_checkpoint_path = 'checkpoints/hasy_%s_model.ckpt' % MODEL_NAME
 
 
@@ -117,19 +117,6 @@ for fold in range(1, 11):
                                               padding='same',
                                               name='MaxPool2D')
         net = tflearn.layers.core.flatten(net, name='Flatten')
-        net = fully_connected(net, 1024,
-                              activation='tanh',
-                              weights_init='truncated_normal',
-                              bias_init='zeros',
-                              regularizer=None,
-                              weight_decay=0)
-        net = fully_connected(net, 1024,
-                              activation='tanh',
-                              weights_init='truncated_normal',
-                              bias_init='zeros',
-                              regularizer=None,
-                              weight_decay=0)
-        net = tflearn.layers.core.dropout(net, keep_prob=0.5)
         net = fully_connected(net, 1024,
                               activation='tanh',
                               weights_init='truncated_normal',
