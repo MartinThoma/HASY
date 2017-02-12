@@ -27,7 +27,7 @@ logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
                     level=logging.INFO,
                     stream=sys.stdout)
 
-__version__ = "v2.2"
+__version__ = "v2.3"
 
 
 def _load_csv(filepath, delimiter=',', quotechar="'"):
@@ -52,9 +52,9 @@ def _load_csv(filepath, delimiter=',', quotechar="'"):
                                 delimiter=delimiter,
                                 quotechar=quotechar)
         for row in reader:
-            if 'path' in row:
-                row['path'] = os.path.abspath(os.path.join(csv_dir,
-                                                           row['path']))
+            for el in ['path', 'path1', 'path2']:
+                if el in row:
+                    row[el] = os.path.abspath(os.path.join(csv_dir, row[el]))
             data.append(row)
     return data
 
@@ -115,7 +115,7 @@ def load_images(csv_filepath, symbol_id2index,
                      and source is a list of file paths
     """
     WIDTH, HEIGHT = 32, 32
-    dataset_path = os.path.dirname(csv_filepath)  # Main directory of HASY
+    dataset_path = os.path.dirname(csv_filepath)
     data = _load_csv(csv_filepath)
     if flatten:
         images = np.zeros((len(data), WIDTH * HEIGHT))
@@ -147,6 +147,53 @@ def load_images(csv_filepath, symbol_id2index,
         data[2] = [data[2][index] for index in perm]
     if one_hot:
         data = (data[0], np.eye(len(symbol_id2index))[data[1]], data[2])
+    return data
+
+
+def _load_images_verification_test(csv_filepath,
+                                   flatten=False,
+                                   normalize=True,
+                                   shuffle=True):
+    data = _load_csv(csv_filepath)
+    WIDTH, HEIGHT = 32, 32
+    if flatten:
+        x1s = np.zeros((len(data), WIDTH * HEIGHT))
+        x2s = np.zeros((len(data), WIDTH * HEIGHT))
+    else:
+        x1s = np.zeros((len(data), WIDTH, HEIGHT, 1))
+        x2s = np.zeros((len(data), WIDTH, HEIGHT, 1))
+    labels, sources = [], []
+    for i, data_item in enumerate(data):
+        sources.append((data_item['path1'], data_item['path2']))
+        if flatten:
+            img1 = scipy.ndimage.imread(data_item['path1'],
+                                        flatten=False, mode='L')
+            img2 = scipy.ndimage.imread(data_item['path2'],
+                                        flatten=False, mode='L')
+            x1s[i, :] = img1.flatten()
+            x2s[i, :] = img2.flatten()
+        else:
+            x1s[i, :, :, 0] = scipy.ndimage.imread(data_item['path1'],
+                                                   flatten=False,
+                                                   mode='L')
+            x2s[i, :, :, 0] = scipy.ndimage.imread(data_item['path2'],
+                                                   flatten=False,
+                                                   mode='L')
+        labels.append(float(data_item['is_same'] == 'True'))
+    # Make sure the type of images is float32
+    x1s = np.array(x1s, dtype=np.float32)
+    x2s = np.array(x1s, dtype=np.float32)
+    if normalize:
+        x1s /= 255.0
+        x2s /= 255.0
+    data = [x1s, x2s, np.array(labels), sources]
+    if shuffle:
+        perm = np.arange(len(labels))
+        np.random.shuffle(perm)
+        data[0] = data[0][perm]
+        data[1] = data[1][perm]
+        data[2] = data[2][perm]
+        data[3] = [data[3][index] for index in perm]
     return data
 
 
@@ -200,6 +247,16 @@ def _maybe_extract(tarfile_path, work_directory):
             tar.extractall(path=work_directory)
 
 
+def _get_data(dataset_path):
+    filelist = [{'filename': 'HASYv2.tar.bz2',
+                 'source': ('https://zenodo.org/record/259444/files/'
+                            'HASYv2.tar.bz2'),
+                 'md5sum': 'fddf23f36e24b5236f6b3a0880c778e3'}]
+    _maybe_download(filelist, work_directory=dataset_path)
+    tar_filepath = os.path.join(dataset_path, filelist[0]['filename'])
+    _maybe_extract(tar_filepath, dataset_path)
+
+
 def load_data(fold=1,
               dataset_path='../',
               one_hot=False,
@@ -214,6 +271,7 @@ def load_data(fold=1,
     fold : 1, 2, 3, 4, 5, 6, 7, 8, 9, or 10, optional (default: 1)
     dataset_path : str, optional (default: '../')
     one_hot : bool, optional (default: False)
+        Encoding of labels
     normalize : bool, optional (default: True)
         Noramlize features to {0.0, 1.0}
     shuffle : bool, optional (default: True)
@@ -227,13 +285,10 @@ def load_data(fold=1,
         keys: 'train', 'test', 'n_classes'
         where 'train' and test are both dicts with keys 'X', 'y' and 'source'
     """
-    filelist = [{'filename': 'HASYv2.tar.bz2',
-                 'source': ('https://zenodo.org/record/259444/files/'
-                            'HASYv2.tar.bz2'),
-                 'md5sum': 'fddf23f36e24b5236f6b3a0880c778e3'}]
-    _maybe_download(filelist, work_directory=dataset_path)
-    tar_filepath = os.path.join(dataset_path, filelist[0]['filename'])
-    _maybe_extract(tar_filepath, dataset_path)
+    # Make sure the data is there
+    _get_data(dataset_path)
+
+    # Load the data
     symbol_id2index = generate_index("%s/symbols.csv" % dataset_path)
     base_ = "%s/classification-task/fold" % dataset_path
     x_train, y_train, s_train = load_images('%s-%i/train.csv' %
@@ -257,6 +312,78 @@ def load_data(fold=1,
                      'y': y_test,
                      'source': s_test},
             'n_classes': 369}
+    return data
+
+
+def load_data_verification(dataset_path='../',
+                           one_hot=True,
+                           normalize=True,
+                           shuffle=True,
+                           flatten=False):
+    """
+    Load the data for the verification task.
+
+    Parameters
+    ----------
+    dataset_path : str, optional (default: '../')
+        Path to the HASY main directory
+    one_hot : bool, optional (default: True)
+        Encoding of labels
+    normalize: bool, optional (default: True)
+        Noramlize features to {0.0, 1.0}
+    shuffle : bool, optional (default: True)
+        Shuffle loaded data
+    flatten : bool, optional (default: False)
+        Flatten feature vector
+
+    Returns
+    -------
+    dict
+        with keys 'train' = {'X': List of loaded images, 'y': list of labels}
+        and 'test-v1' = {'X1s': List of first images,
+                         'X2s': List of second images,
+                         'ys': List of labels 'True' or 'False'}
+        and 'test-v2' and 'test-v3' with the same structure as 'test-v1'.
+    """
+    # Make sure the data is there
+    _get_data(dataset_path)
+
+    # Load the data
+    symbol_id2index = generate_index("%s/symbols.csv" % dataset_path)
+    base_ = "%s/verification-task/" % dataset_path
+    x_train, y_train, s_train = load_images('%s/train.csv' % base_,
+                                            symbol_id2index,
+                                            one_hot=one_hot,
+                                            normalize=normalize,
+                                            shuffle=shuffle,
+                                            flatten=flatten)
+    tmp1 = _load_images_verification_test('%s/test-v1.csv' % base_,
+                                          flatten=flatten,
+                                          normalize=normalize,
+                                          shuffle=shuffle)
+    tmp2 = _load_images_verification_test('%s/test-v2.csv' % base_,
+                                          flatten=flatten,
+                                          normalize=normalize,
+                                          shuffle=shuffle)
+    tmp3 = _load_images_verification_test('%s/test-v3.csv' % base_,
+                                          flatten=flatten,
+                                          normalize=normalize,
+                                          shuffle=shuffle)
+    data = {'train': {'X': x_train,
+                      'y': y_train,
+                      'source': s_train},
+            'test-v1': {'X1s': tmp1[0],
+                        'X2s': tmp1[1],
+                        'ys': tmp1[2],
+                        'sources': tmp1[3]},
+            'test-v2': {'X1s': tmp2[0],
+                        'X2s': tmp2[1],
+                        'ys': tmp2[2],
+                        'sources': tmp2[3]},
+            'test-v3': {'X1s': tmp3[0],
+                        'X2s': tmp3[1],
+                        'ys': tmp3[2],
+                        'sources': tmp3[3]}}
     return data
 
 
