@@ -44,20 +44,20 @@ print("Load data")
 hasy_data = load_data(normalize=True, dataset_path=dataset_path)
 
 print("edit data")
-X_train = hasy_data['train']['X']
-y_train = hasy_data['train']['y']
-s_train = hasy_data['train']['source']
-X_test = hasy_data['test']['X']
-y_test = hasy_data['test']['y']
-s_test = hasy_data['test']['source']
+train_x = hasy_data['train']['X']
+train_y = hasy_data['train']['y']
+train_s = hasy_data['train']['source']
+test_x = hasy_data['test']['X']
+test_y = hasy_data['test']['y']
+test_s = hasy_data['test']['source']
 
 if K.image_dim_ordering() == 'th':
-    X_train = X_train.reshape(X_train.shape[0], 1, img_rows, img_cols)
-    X_test = X_test.reshape(X_test.shape[0], 1, img_rows, img_cols)
+    train_x = train_x.reshape(train_x.shape[0], 1, img_rows, img_cols)
+    test_x = test_x.reshape(test_x.shape[0], 1, img_rows, img_cols)
     input_shape = (1, img_rows, img_cols)
 else:
-    X_train = X_train.reshape(X_train.shape[0], img_rows, img_cols, 1)
-    X_test = X_test.reshape(X_test.shape[0], img_rows, img_cols, 1)
+    train_x = train_x.reshape(train_x.shape[0], img_rows, img_cols, 1)
+    test_x = test_x.reshape(test_x.shape[0], img_rows, img_cols, 1)
     input_shape = (img_rows, img_cols, 1)
 
 
@@ -70,9 +70,9 @@ def is_confusable(merge_classes, el1, el2):
 
 
 print("Evaluate model")
-out = model.predict_classes(X_test)
+out = model.predict_classes(test_x)
 wrongs = []
-for el in zip(out, y_test, s_test):
+for el in zip(out, test_y, test_s):
     el1 = index2latex(el[0])
     el2 = index2latex(el[1])
     if el[0] != el[1] and not is_confusable(merge_classes, el1, el2):
@@ -87,7 +87,7 @@ with open("index.html", "w") as f:
                                    pred=index2latex(pred),
                                    true=index2latex(true_c)))
 
-y_test = np_utils.to_categorical(y_test, nb_classes)
-score = model.evaluate(X_test, y_test, verbose=0)
+test_y = np_utils.to_categorical(test_y, nb_classes)
+score = model.evaluate(test_x, test_y, verbose=0)
 print('Test score:', score[0])
 print('Test accuracy:', score[1])

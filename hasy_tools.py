@@ -154,6 +154,28 @@ def _load_images_verification_test(csv_filepath,
                                    flatten=False,
                                    normalize=True,
                                    shuffle=True):
+    """
+    Load images from the verification test files.
+
+    Parameters
+    ----------
+    csv_filepath : str
+        'test-v1.csv' or 'test-v2.csv' or 'test-v3.csv'
+    flatten : bool, optional (default: False)
+        Flatten feature vector
+    normalize : bool, optional (default: True)
+        Noramlize features to {0.0, 1.0}
+    shuffle : bool, optional (default: True)
+        Shuffle loaded data
+
+    Returns
+    -------
+    list
+        [x1s, x2s, labels, sources] where all four are lists of equal length
+        x1s and x2s contain images,
+        labels contains either True or False
+        sources contains strings
+    """
     data = _load_csv(csv_filepath)
     WIDTH, HEIGHT = 32, 32
     if flatten:
@@ -248,6 +270,13 @@ def _maybe_extract(tarfile_path, work_directory):
 
 
 def _get_data(dataset_path):
+    """
+    Download data and extract it, if it is not already in dataset_path.
+
+    Parameters
+    ----------
+    dataset_path : str
+    """
     filelist = [{'filename': 'HASYv2.tar.bz2',
                  'source': ('https://zenodo.org/record/259444/files/'
                             'HASYv2.tar.bz2'),
@@ -289,17 +318,15 @@ def load_data(fold=1,
     _get_data(dataset_path)
 
     # Load the data
-    symbol_id2index = generate_index("%s/symbols.csv" % dataset_path)
-    base_ = "%s/classification-task/fold" % dataset_path
-    x_train, y_train, s_train = load_images('%s-%i/train.csv' %
-                                            (base_, fold),
+    symbol_id2index = generate_index("{}/symbols.csv".format(dataset_path))
+    base_ = "{}/classification-task/fold".format(dataset_path)
+    x_train, y_train, s_train = load_images('%s-%i/train.csv' % (base_, fold),
                                             symbol_id2index,
                                             one_hot=one_hot,
                                             normalize=normalize,
                                             shuffle=shuffle,
                                             flatten=flatten)
-    x_test, y_test, s_test = load_images('%s-%i/test.csv' %
-                                         (base_, fold),
+    x_test, y_test, s_test = load_images('%s-%i/test.csv' % (base_, fold),
                                          symbol_id2index,
                                          one_hot=one_hot,
                                          normalize=normalize,
@@ -349,8 +376,8 @@ def load_data_verification(dataset_path='../',
     _get_data(dataset_path)
 
     # Load the data
-    symbol_id2index = generate_index("%s/symbols.csv" % dataset_path)
-    base_ = "%s/verification-task/" % dataset_path
+    symbol_id2index = generate_index("{}/symbols.csv".format(dataset_path))
+    base_ = "{}/verification-task/".format(dataset_path)
     x_train, y_train, s_train = load_images('%s/train.csv' % base_,
                                             symbol_id2index,
                                             one_hot=one_hot,
