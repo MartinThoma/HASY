@@ -1,12 +1,15 @@
-Please refer to the HASY paper for details about the dataset.
-If you want to report problems of the HASY dataset, please send an email to
-info@martin-thoma.de or file an issue at https://github.com/MartinThoma/HASY
+Please refer to the [HASY paper](https://arxiv.org/abs/1701.08380) for details
+about the dataset. If you want to report problems of the HASY dataset, please
+send an email to info@martin-thoma.de or file an issue at
+https://github.com/MartinThoma/HASY
 
 Errata are listed in the git repository as well as the latest supplementary
 files like `hasy_tools.py`.
 
 
 ## Contents
+
+The contents of the [HASYv2 dataset](https://zenodo.org/record/259444) are:
 
 * `hasy-data`: 168236 png images, each 32px x 32px
 * `hasy-data-labels.csv`: Labels for all images.
