@@ -90,6 +90,7 @@ for fold in range(1, 11):
     results = {}
 
     tf.reset_default_graph()  # Don't influence the other folds
+    tf.set_random_seed(0)  # make sure results are reproducible
     with tf.Session() as sess:
         x = tf.placeholder(tf.float32, shape=[None, 1024])
         y_ = tf.placeholder(tf.float32, shape=[None, 369])
