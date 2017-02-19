@@ -13,6 +13,7 @@ import csv
 import json
 import os
 import random
+random.seed(0)  # make sure results are reproducible
 from PIL import Image, ImageDraw
 import sys
 from six.moves import urllib
@@ -20,6 +21,7 @@ import hashlib
 from sklearn.model_selection import train_test_split
 
 import numpy as np
+np.random.seed(0)  # make sure results are reproducible
 import scipy.ndimage
 import matplotlib.pyplot as plt
 
@@ -874,7 +876,6 @@ def _create_verification_task(sample_size=32, test_size=0.05):
     symbolid2latex = _get_symbolid2latex()
 
     # Get complete classes
-    random.seed(1337)
     symbols = random.sample(range(len(data)), k=sample_size)
     symbols = sorted(symbols, reverse=True)
     test_data_excluded = []

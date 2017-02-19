@@ -9,16 +9,19 @@ Gets to 77.77% test accuracy after 1 epoch.
 
 from __future__ import print_function
 import numpy as np
-np.random.seed(1337)  # for reproducibility
+np.random.seed(0)  # make sure results are reproducible
 import os
-import hasy_tools as ht
 
+import tensorflow as tf
+tf.set_random_seed(0)  # make sure results are reproducible
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Flatten
 from keras.layers import Convolution2D, MaxPooling2D
 from keras.layers.advanced_activations import PReLU
 from keras.optimizers import Adam
 from keras import backend as K
+
+import hasy_tools as ht
 
 batch_size = 128
 nb_epoch = 1

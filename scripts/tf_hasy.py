@@ -2,23 +2,23 @@
 
 """HASY with Tensorflow."""
 
-import input_data
-from classifier_comp import write_analyzation_results, pretty_print
 
 import tensorflow as tf
+tf.set_random_seed(0)  # make sure results are reproducible
 import tflearn
 from tflearn.layers.core import fully_connected
-# import tflearn.utils as utils
-# import tflearn.variables as vs
-# from tensorflow.python.training import moving_averages
-# from tensorflow.python.framework import ops
 
 import os
 import numpy as np
+np.random.seed(0)  # make sure results are reproducible
 import time
 
+import input_data
+from classifier_comp import write_analyzation_results, pretty_print
+
+batch_size = 128
 epochs = 100000  # 200000
-MODEL_NAME = 'tf-cnn-prelu'
+MODEL_NAME = 'tf-cnn'
 model_checkpoint_path = 'checkpoints/hasy_%s_model.ckpt' % MODEL_NAME
 
 
@@ -97,18 +97,13 @@ for fold in range(1, 11):
         net = tflearn.layers.conv.conv_2d(net,
                                           nb_filter=32,
                                           filter_size=3,
-                                          activation='prelu',
+                                          activation='relu',
                                           strides=1,
                                           weight_decay=0.0)
-        net = tflearn.layers.conv.max_pool_2d(net,
-                                              kernel_size=2,
-                                              strides=2,
-                                              padding='same',
-                                              name='MaxPool2D')
         net = tflearn.layers.conv.conv_2d(net,
                                           nb_filter=64,
                                           filter_size=3,
-                                          activation='prelu',
+                                          activation='relu',
                                           strides=1,
                                           weight_decay=0.0)
         net = tflearn.layers.conv.max_pool_2d(net,
@@ -116,6 +111,7 @@ for fold in range(1, 11):
                                               strides=2,
                                               padding='same',
                                               name='MaxPool2D')
+        net = tflearn.layers.core.dropout(net, keep_prob=0.25)
         net = tflearn.layers.core.flatten(net, name='Flatten')
         net = fully_connected(net, 1024,
                               activation='tanh',
@@ -130,10 +126,6 @@ for fold in range(1, 11):
                                  bias_init='zeros',
                                  regularizer=None,
                                  weight_decay=0)
-
-        # for op in y_conv.get_operations():
-        #     flops = ops.get_stats_for_node_def(g, op.node_def, 'flops').value
-        #     print("FLOPS: %s" % str(flops))
 
         total_parameters = 0
         for variable in tf.trainable_variables():
@@ -171,7 +163,7 @@ for fold in range(1, 11):
         print("validation_curve_path: %s" % validation_curve_path)
         t0 = time.time()
         for i in range(epochs):
-            batch = hasy.train.next_batch(50)
+            batch = hasy.train.next_batch(batch_size)
             if i % 500 == 0:
                 log_score(sess, summary_writer,
                           validation_curve_path,
@@ -190,7 +182,6 @@ for fold in range(1, 11):
         print("Evaluate model")
         cm = np.zeros((369, 369), dtype=int)
         t0 = time.time()
-        batch_size = 128
         loops = int(len(hasy.test.images) / batch_size)
         if loops * batch_size < len(hasy.test.images):
             loops += 1

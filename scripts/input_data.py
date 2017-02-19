@@ -3,13 +3,17 @@
 
 """Load the HASY dataset."""
 
-from hasy_tools import generate_index, load_images
-import numpy
+import numpy as np
+np.random.seed(0)  # make sure results are reproducible
 from six.moves import xrange
 import os
 
+import tensorflow as tf
+tf.set_random_seed(0)  # make sure results are reproducible
 from tensorflow.contrib.learn.python.learn.datasets import base
 from tensorflow.python.framework import dtypes
+
+from hasy_tools import generate_index, load_images
 
 
 class DataSet(object):
@@ -50,8 +54,8 @@ class DataSet(object):
                                         images.shape[1] * images.shape[2])
             if dtype == dtypes.float32:
                 # Convert from [0, 255] -> [0.0, 1.0].
-                images = images.astype(numpy.float32)
-                images = numpy.multiply(images, 1.0 / 255.0)
+                images = images.astype(np.float32)
+                images = np.multiply(images, 1.0 / 255.0)
         self._images = images
         self._labels = labels
         self._epochs_completed = 0
@@ -89,8 +93,8 @@ class DataSet(object):
             # Finished epoch
             self._epochs_completed += 1
             # Shuffle the data
-            perm = numpy.arange(self._num_examples)
-            numpy.random.shuffle(perm)
+            perm = np.arange(self._num_examples)
+            np.random.shuffle(perm)
             self._images = self._images[perm]
             self._labels = self._labels[perm]
             # Start next epoch
@@ -132,8 +136,8 @@ def read_data_sets(train_labels_csv,
             'Validation size should be between 0 and {}. Received: {}.'
             .format(len(train_images), validation_size))
     # Shuffle data
-    perm = numpy.arange(len(train_labels))
-    numpy.random.shuffle(perm)
+    perm = np.arange(len(train_labels))
+    np.random.shuffle(perm)
     train_images = train_images[perm]
     train_labels = train_labels[perm]
     # Split training set in training and validation set
