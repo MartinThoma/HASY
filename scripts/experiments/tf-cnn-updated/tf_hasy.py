@@ -2,10 +2,9 @@
 
 """HASY with Tensorflow."""
 
-import input_data
-from classifier_comp import write_analyzation_results, pretty_print
 
 import tensorflow as tf
+tf.set_random_seed(0)  # make sure results are reproducible
 import tflearn
 from tflearn.layers.core import fully_connected
 # import tflearn.utils as utils
@@ -15,8 +14,14 @@ from tflearn.layers.core import fully_connected
 
 import os
 import numpy as np
+np.random.seed(0)  # make sure results are reproducible
 import time
+import sys
+sys.path.append('/home/moose/GitHub/HASY/scripts')
+import input_data
+from classifier_comp import write_analyzation_results, pretty_print
 
+batch_size = 128
 epochs = 30000  # 200000
 MODEL_NAME = 'cnn-32-32-64-64-1024-1024-relu-30000'
 model_checkpoint_path = 'checkpoints/hasy_%s_model.ckpt' % MODEL_NAME
@@ -90,6 +95,7 @@ for fold in range(1, 11):
     results = {}
 
     tf.reset_default_graph()  # Don't influence the other folds
+    tf.set_random_seed(0)  # make sure results are reproducible
     with tf.Session() as sess:
         x = tf.placeholder(tf.float32, shape=[None, 1024])
         y_ = tf.placeholder(tf.float32, shape=[None, 369])
@@ -149,10 +155,6 @@ for fold in range(1, 11):
                                  regularizer=None,
                                  weight_decay=0)
 
-        # for op in y_conv.get_operations():
-        #     flops = ops.get_stats_for_node_def(g, op.node_def, 'flops').value
-        #     print("FLOPS: %s" % str(flops))
-
         total_parameters = 0
         for variable in tf.trainable_variables():
             # shape is an array of tf.Dimension
@@ -181,15 +183,14 @@ for fold in range(1, 11):
 
         sess.run(tf.global_variables_initializer())
         model_checkpoint_path = get_nonexisting_path(model_checkpoint_path)
-        validation_curve_path = get_nonexisting_path('validation-curves/'
-                                                     'validation'
+        validation_curve_path = get_nonexisting_path('validation'
                                                      '-curve-accuracy-%s.csv' %
                                                      MODEL_NAME)
         print("model_checkpoint_path: %s" % model_checkpoint_path)
         print("validation_curve_path: %s" % validation_curve_path)
         t0 = time.time()
         for i in range(epochs):
-            batch = hasy.train.next_batch(50)
+            batch = hasy.train.next_batch(batch_size)
             if i % 500 == 0:
                 log_score(sess, summary_writer,
                           validation_curve_path,
@@ -208,7 +209,6 @@ for fold in range(1, 11):
         print("Evaluate model")
         cm = np.zeros((369, 369), dtype=int)
         t0 = time.time()
-        batch_size = 128
         loops = int(len(hasy.test.images) / batch_size)
         if loops * batch_size < len(hasy.test.images):
             loops += 1
