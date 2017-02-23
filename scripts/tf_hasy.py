@@ -23,30 +23,15 @@ model_checkpoint_path = 'checkpoints/hasy_%s_model.ckpt' % MODEL_NAME
 
 
 def eval_network(sess, summary_writer, dataset, correct_prediction, epoch,
-                 mode, make_summary=False):
+                 mode):
     """Evaluate the network."""
     correct_sum = 0
     total_test = 0
-    if mode == 'test' and make_summary:
-        training_summary = (tf.get_default_graph()
-                            ).get_tensor_by_name("training_accuracy:0")
-        loss_summary = tf.get_default_graph().get_tensor_by_name("loss:0")
-    for i in range(dataset.labels.shape[0] / 1000):
-        feed_dict = {x: dataset.images[i * 1000:(i + 1) * 1000],
-                     y_: dataset.labels[i * 1000:(i + 1) * 1000],
-                     # keep_prob: 1.0
-                     }
-
-        if mode == 'test' and make_summary:
-            out = sess.run([correct_prediction,
-                            training_summary,
-                            loss_summary],
-                           feed_dict=feed_dict)
-            [test_correct, train_summ, loss_summ] = out
-            summary_writer.add_summary(train_summ, epoch)
-            summary_writer.add_summary(loss_summ, epoch)
-        else:
-            test_correct = correct_prediction.eval(feed_dict=feed_dict)
+    batch_size = 1000
+    for i in range(dataset.labels.shape[0] / batch_size):
+        feed_dict = {x: dataset.images[i * batch_size:(i + 1) * batch_size],
+                     y_: dataset.labels[i * batch_size:(i + 1) * batch_size]}
+        test_correct = correct_prediction.eval(feed_dict=feed_dict)
         correct_sum += sum(test_correct)
         total_test += len(test_correct)
     return float(correct_sum) / total_test
