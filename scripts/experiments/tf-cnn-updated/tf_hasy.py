@@ -7,11 +7,6 @@ import tensorflow as tf
 tf.set_random_seed(0)  # make sure results are reproducible
 import tflearn
 from tflearn.layers.core import fully_connected
-# import tflearn.utils as utils
-# import tflearn.variables as vs
-# from tensorflow.python.training import moving_averages
-# from tensorflow.python.framework import ops
-
 import os
 import numpy as np
 np.random.seed(0)  # make sure results are reproducible
@@ -212,10 +207,10 @@ for fold in range(1, 11):
         loops = int(len(hasy.test.images) / batch_size)
         if loops * batch_size < len(hasy.test.images):
             loops += 1
-        print(hasy.test.images.shape)
+
         for i in range(loops):
             data = hasy.test.images[i * batch_size:(i + 1) * batch_size]
-            data = data.reshape((-1, 1024))
+            data = data.reshape((-1, 32 * 32))
             predicted = tf.argmax(y_conv, 1).eval(feed_dict={x: data})
             actual = np.argmax(hasy.test.labels[i * batch_size:
                                                 (i + 1) * batch_size], 1)
