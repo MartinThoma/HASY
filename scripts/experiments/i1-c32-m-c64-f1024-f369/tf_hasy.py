@@ -1,37 +1,52 @@
 #!/usr/bin/env python
 
-"""Train a NN on the HASY dataset with Tensorflow."""
+"""HASY with Tensorflow."""
 
-
-import tensorflow as tf
-tf.set_random_seed(0)  # make sure results are reproducible
-import tflearn
-from tflearn.layers.core import fully_connected
-import os
-import numpy as np
-np.random.seed(0)  # make sure results are reproducible
-import time
-import sys
-sys.path.append('/home/moose/GitHub/HASY/scripts')
 import input_data
 from classifier_comp import write_analyzation_results, pretty_print
 
-batch_size = 128
-epochs = 30000  # 200000
-MODEL_NAME = 'i3-c3-m-f369'
+import tensorflow as tf
+import tflearn
+from tflearn.layers.core import fully_connected
+# import tflearn.utils as utils
+# import tflearn.variables as vs
+# from tensorflow.python.training import moving_averages
+# from tensorflow.python.framework import ops
+
+import os
+import numpy as np
+import time
+
+epochs = 100000  # 200000
+MODEL_NAME = 'i1-c32-m-c64-f1024-f369-relu'
 model_checkpoint_path = 'checkpoints/hasy_%s_model.ckpt' % MODEL_NAME
 
 
 def eval_network(sess, summary_writer, dataset, correct_prediction, epoch,
-                 mode):
+                 mode, make_summary=False):
     """Evaluate the network."""
     correct_sum = 0
     total_test = 0
-    batch_size = 1000
-    for i in range(dataset.labels.shape[0] / batch_size):
-        feed_dict = {x: dataset.images[i * batch_size:(i + 1) * batch_size],
-                     y_: dataset.labels[i * batch_size:(i + 1) * batch_size]}
-        test_correct = correct_prediction.eval(feed_dict=feed_dict)
+    if mode == 'test' and make_summary:
+        training_summary = (tf.get_default_graph()
+                            ).get_tensor_by_name("training_accuracy:0")
+        loss_summary = tf.get_default_graph().get_tensor_by_name("loss:0")
+    for i in range(dataset.labels.shape[0] / 1000):
+        feed_dict = {x: dataset.images[i * 1000:(i + 1) * 1000],
+                     y_: dataset.labels[i * 1000:(i + 1) * 1000],
+                     # keep_prob: 1.0
+                     }
+
+        if mode == 'test' and make_summary:
+            out = sess.run([correct_prediction,
+                            training_summary,
+                            loss_summary],
+                           feed_dict=feed_dict)
+            [test_correct, train_summ, loss_summ] = out
+            summary_writer.add_summary(train_summ, epoch)
+            summary_writer.add_summary(loss_summ, epoch)
+        else:
+            test_correct = correct_prediction.eval(feed_dict=feed_dict)
         correct_sum += sum(test_correct)
         total_test += len(test_correct)
     return float(correct_sum) / total_test
@@ -75,13 +90,12 @@ for fold in range(1, 11):
     results = {}
 
     tf.reset_default_graph()  # Don't influence the other folds
-    tf.set_random_seed(0)  # make sure results are reproducible
     with tf.Session() as sess:
         x = tf.placeholder(tf.float32, shape=[None, 1024])
         y_ = tf.placeholder(tf.float32, shape=[None, 369])
         net = tf.reshape(x, [-1, 32, 32, 1])
         net = tflearn.layers.conv.conv_2d(net,
-                                          nb_filter=3,
+                                          nb_filter=32,
                                           filter_size=3,
                                           activation='relu',
                                           strides=1,
@@ -91,13 +105,30 @@ for fold in range(1, 11):
                                               strides=2,
                                               padding='same',
                                               name='MaxPool2D')
+        net = tflearn.layers.conv.conv_2d(net,
+                                          nb_filter=64,
+                                          filter_size=3,
+                                          activation='relu',
+                                          strides=1,
+                                          weight_decay=0.0)
         net = tflearn.layers.core.flatten(net, name='Flatten')
-        y_conv = fully_connected(x, 369,
+        net = fully_connected(net, 1024,
+                              activation='tanh',
+                              weights_init='truncated_normal',
+                              bias_init='zeros',
+                              regularizer=None,
+                              weight_decay=0)
+        net = tflearn.layers.core.dropout(net, keep_prob=0.5)
+        y_conv = fully_connected(net, 369,
                                  activation='softmax',
                                  weights_init='truncated_normal',
                                  bias_init='zeros',
                                  regularizer=None,
                                  weight_decay=0)
+
+        # for op in y_conv.get_operations():
+        #     flops = ops.get_stats_for_node_def(g, op.node_def, 'flops').value
+        #     print("FLOPS: %s" % str(flops))
 
         total_parameters = 0
         for variable in tf.trainable_variables():
@@ -115,31 +146,37 @@ for fold in range(1, 11):
         single_errors = y_ * tf.log(y_conv + 10**(-7))
         cross_entropy = tf.reduce_mean(-tf.reduce_sum(single_errors,
                                                       reduction_indices=[1]))
-        train_step = tf.train.AdamOptimizer(1e-1).minimize(cross_entropy)
+        step = tf.Variable(0, trainable=False)
+        rate = tf.train.exponential_decay(1e-3, step, 1, 0.9999)
+        train_step = tf.train.AdamOptimizer(rate).minimize(cross_entropy,
+                                                           global_step=step)
         correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(y_, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-        # tf.summary.scalar("training_accuracy", accuracy)
-        # tf.summary.scalar("loss", cross_entropy)
+        tf.summary.scalar("training_accuracy", accuracy)
+        tf.summary.scalar("loss", cross_entropy)
+
         # Add ops to save and restore all the variables.
         saver = tf.train.Saver()
         summary_writer = tf.summary.FileWriter('summary_dir', sess.graph)
 
         sess.run(tf.global_variables_initializer())
         model_checkpoint_path = get_nonexisting_path(model_checkpoint_path)
-        validation_curve_path = get_nonexisting_path('validation'
+        validation_curve_path = get_nonexisting_path('validation-curves/'
+                                                     'validation'
                                                      '-curve-accuracy-%s.csv' %
                                                      MODEL_NAME)
         print("model_checkpoint_path: %s" % model_checkpoint_path)
         print("validation_curve_path: %s" % validation_curve_path)
         t0 = time.time()
         for i in range(epochs):
-            batch = hasy.train.next_batch(batch_size)
+            batch = hasy.train.next_batch(50)
             if i % 500 == 0:
                 log_score(sess, summary_writer,
                           validation_curve_path,
                           hasy, correct_prediction, i)
             train_step.run(feed_dict={x: batch[0],
-                                      y_: batch[1]
+                                      y_: batch[1],
+                                      # keep_prob: 0.5
                                       })
         t1 = time.time()
         results['fit_time'] = t1 - t0
@@ -151,13 +188,14 @@ for fold in range(1, 11):
         print("Evaluate model")
         cm = np.zeros((369, 369), dtype=int)
         t0 = time.time()
+        batch_size = 128
         loops = int(len(hasy.test.images) / batch_size)
         if loops * batch_size < len(hasy.test.images):
             loops += 1
-
+        print(hasy.test.images.shape)
         for i in range(loops):
             data = hasy.test.images[i * batch_size:(i + 1) * batch_size]
-            data = data.reshape((-1, 32 * 32))
+            data = data.reshape((-1, 1024))
             predicted = tf.argmax(y_conv, 1).eval(feed_dict={x: data})
             actual = np.argmax(hasy.test.labels[i * batch_size:
                                                 (i + 1) * batch_size], 1)
