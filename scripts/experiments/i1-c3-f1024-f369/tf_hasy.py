@@ -18,7 +18,7 @@ from classifier_comp import write_analyzation_results, pretty_print
 
 batch_size = 128
 epochs = 100000  # 200000
-MODEL_NAME = 'i1-c32-c32-m-f369'
+MODEL_NAME = 'i1-c3-f1024-f369'
 model_checkpoint_path = 'checkpoints/hasy_%s_model.ckpt' % MODEL_NAME
 
 
@@ -81,23 +81,24 @@ for fold in range(1, 11):
         y_ = tf.placeholder(tf.float32, shape=[None, 369])
         net = tf.reshape(x, [-1, 32, 32, 1])
         net = tflearn.layers.conv.conv_2d(net,
-                                          nb_filter=32,
+                                          nb_filter=3,
                                           filter_size=3,
                                           activation='relu',
                                           strides=1,
                                           weight_decay=0.0)
         net = tflearn.layers.conv.conv_2d(net,
-                                          nb_filter=32,
+                                          nb_filter=3,
                                           filter_size=3,
                                           activation='relu',
                                           strides=1,
                                           weight_decay=0.0)
-        net = tflearn.layers.conv.max_pool_2d(net,
-                                              kernel_size=2,
-                                              strides=2,
-                                              padding='same',
-                                              name='MaxPool2D')
         net = tflearn.layers.core.flatten(net, name='Flatten')
+        net = fully_connected(net, 1024,
+                              activation='tanh',
+                              weights_init='truncated_normal',
+                              bias_init='zeros',
+                              regularizer=None,
+                              weight_decay=0)
         y_conv = fully_connected(net, 369,
                                  activation='softmax',
                                  weights_init='truncated_normal',
@@ -122,7 +123,7 @@ for fold in range(1, 11):
         cross_entropy = tf.reduce_mean(-tf.reduce_sum(single_errors,
                                                       reduction_indices=[1]))
         step = tf.Variable(0, trainable=False)
-        rate = tf.train.exponential_decay(1e-1, step, 1, 0.9999)
+        rate = tf.train.exponential_decay(1e-3, step, 1, 0.9999)
         train_step = tf.train.AdamOptimizer(rate).minimize(cross_entropy,
                                                            global_step=step)
         correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(y_, 1))

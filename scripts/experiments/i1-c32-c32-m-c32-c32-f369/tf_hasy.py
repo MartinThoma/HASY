@@ -110,7 +110,7 @@ for fold in range(1, 11):
                                           strides=1,
                                           weight_decay=0.0)
         net = tflearn.layers.core.flatten(net, name='Flatten')
-        y_conv = fully_connected(x, 369,
+        y_conv = fully_connected(net, 369,
                                  activation='softmax',
                                  weights_init='truncated_normal',
                                  bias_init='zeros',
