@@ -18,7 +18,7 @@ from classifier_comp import write_analyzation_results, pretty_print
 
 batch_size = 128
 epochs = 50000  # 200000
-MODEL_NAME = 'i1-c32-f369'
+MODEL_NAME = 'i1-c16-f369'
 model_checkpoint_path = 'checkpoints/hasy_%s_model.ckpt' % MODEL_NAME
 
 
@@ -81,7 +81,7 @@ for fold in range(1, 11):
         y_ = tf.placeholder(tf.float32, shape=[None, 369])
         net = tf.reshape(x, [-1, 32, 32, 1])
         net = tflearn.layers.conv.conv_2d(net,
-                                          nb_filter=32,
+                                          nb_filter=16,
                                           filter_size=3,
                                           activation='relu',
                                           strides=1,
