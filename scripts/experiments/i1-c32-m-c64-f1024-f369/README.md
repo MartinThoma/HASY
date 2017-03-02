@@ -1,13 +1,3 @@
-model_checkpoint_path: checkpoints/hasy_tf-cnn-3-32-m-64-1024-369-relu_model.ckpt
-validation_curve_path: validation-curves/validation-curve-accuracy-tf-cnn-3-32-m-64-1024-369-relu-8.csv
-Evaluate model
-(16698, 1024)
-tf-cnn-3-32-m-64-1024-369-relu:
-    train_time: 2552.2 (min=2532.77, max=2565.35)
-    test_time:  3.1 (min=2.99, max=3.14)
-    acc:        77.4 (min=76.7, max=77.9)
-{'tf-cnn-3-32-m-64-1024-369-relu': [{'training_time': 2532.7650158405304, 'testing_time': 3.1364870071411133, 'accuracy': 0.776777306967985}, {'training_time': 2552.443300962448, 'testing_time': 3.0861690044403076, 'accuracy': 0.7788138093832989}, {'training_time': 2548.1829268932343, 'testing_time': 3.0987019538879395, 'accuracy': 0.7786909477916396}, {'training_time': 2546.4463608264923, 'testing_time': 3.071932077407837, 'accuracy': 0.7754666666666666}, {'training_time': 2553.8617050647736, 'testing_time': 3.1344211101531982, 'accuracy': 0.76897493764105}, {'training_time': 2553.1900198459625, 'testing_time': 3.0482399463653564, 'accuracy': 0.7691850089232599}, {'training_time': 2557.976940870285, 'testing_time': 3.0863120555877686, 'accuracy': 0.7666527521020932}, {'training_time': 2559.4708001613617, 'testing_time': 3.045802116394043, 'accuracy': 0.7762969160889314}, {'training_time': 2565.347053050995, 'testing_time': 2.992043972015381, 'accuracy': 0.7770990537788957}]}
-I tensorflow/core/common_runtime/gpu/gpu_device.cc:975] Creating TensorFlow device (/gpu:0) -> (device: 0, name: GeForce GTX TITAN Black, pci bus id: 0000:01:00.0)
     shape: (3, 3, 1, 32)
     variable_parametes: 288
     ---
@@ -33,16 +23,15 @@ I tensorflow/core/common_runtime/gpu/gpu_device.cc:975] Creating TensorFlow devi
     variable_parametes: 369
     ---
 total_parameters: 17175281
-model_checkpoint_path: checkpoints/hasy_tf-cnn-3-32-m-64-1024-369-relu_model.ckpt
-validation_curve_path: validation-curves/validation-curve-accuracy-tf-cnn-3-32-m-64-1024-369-relu-9.csv
+model_checkpoint_path: checkpoints/hasy_i1-c32-m-c64-f1024-d0.5-f369_model.ckpt
+validation_curve_path: validation-curve-accuracy-i1-c32-m-c64-f1024-d0.5-f369-9.csv
 Evaluate model
-(16661, 1024)
-tf-cnn-3-32-m-64-1024-369-relu:
-    train_time: 2553.9 (min=2532.77, max=2569.62)
-    test_time:  3.1 (min=2.99, max=3.14)
-    acc:        77.4 (min=76.7, max=77.9)
-{'tf-cnn-3-32-m-64-1024-369-relu': [{'training_time': 2532.7650158405304, 'testing_time': 3.1364870071411133, 'accuracy': 0.776777306967985}, {'training_time': 2552.443300962448, 'testing_time': 3.0861690044403076, 'accuracy': 0.7788138093832989}, {'training_time': 2548.1829268932343, 'testing_time': 3.0987019538879395, 'accuracy': 0.7786909477916396}, {'training_time': 2546.4463608264923, 'testing_time': 3.071932077407837, 'accuracy': 0.7754666666666666}, {'training_time': 2553.8617050647736, 'testing_time': 3.1344211101531982, 'accuracy': 0.76897493764105}, {'training_time': 2553.1900198459625, 'testing_time': 3.0482399463653564, 'accuracy': 0.7691850089232599}, {'training_time': 2557.976940870285, 'testing_time': 3.0863120555877686, 'accuracy': 0.7666527521020932}, {'training_time': 2559.4708001613617, 'testing_time': 3.045802116394043, 'accuracy': 0.7762969160889314}, {'training_time': 2565.347053050995, 'testing_time': 2.992043972015381, 'accuracy': 0.7770990537788957}, {'training_time': 2569.6175878047943, 'testing_time': 3.0746641159057617, 'accuracy': 0.769641678170578}]}
+i1-c32-m-c64-f1024-d0.5-f369:
+    train_time:    1672.9 (min=1665.57, max=1685.31)
+    test_time:    2.7 (min=2.64, max=2.76)
+    acc:        79.2 (min=78.9, max=79.8)
+{'i1-c32-m-c64-f1024-d0.5-f369': [{'training_time': 1667.236479997635, 'testing_time': 2.734893798828125, 'accuracy': 0.7959039548022598}, {'training_time': 1680.0274150371552, 'testing_time': 2.7643308639526367, 'accuracy': 0.7976984361168487}, {'training_time': 1669.9604768753052, 'testing_time': 2.680663824081421, 'accuracy': 0.7912848105007982}, {'training_time': 1665.5662569999695, 'testing_time': 2.6791188716888428, 'accuracy': 0.7885037037037037}, {'training_time': 1673.889631986618, 'testing_time': 2.6488919258117676, 'accuracy': 0.7896424753533674}, {'training_time': 1673.4201829433441, 'testing_time': 2.7242770195007324, 'accuracy': 0.791017251635931}, {'training_time': 1669.6256868839264, 'testing_time': 2.667342185974121, 'accuracy': 0.7912218975490488}, {'training_time': 1672.8090510368347, 'testing_time': 2.6513350009918213, 'accuracy': 0.792254362897442}, {'training_time': 1671.0265572071075, 'testing_time': 2.6395070552825928, 'accuracy': 0.7929692178704036}, {'training_time': 1685.3120880126953, 'testing_time': 2.648765802383423, 'accuracy': 0.7926294940279696}]}
 
-real    25919,67s
-user    22956,63s
-sys 2494,01s
+real    17017,59s
+user    13817,39s
+sys    1953,98s

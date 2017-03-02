@@ -17,7 +17,7 @@ import input_data
 from classifier_comp import write_analyzation_results, pretty_print
 
 batch_size = 128
-epochs = 100000  # 200000
+epochs = 50000  # 200000
 MODEL_NAME = 'i1-c32-c32-f369'
 model_checkpoint_path = 'checkpoints/hasy_%s_model.ckpt' % MODEL_NAME
 
