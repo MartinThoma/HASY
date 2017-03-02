@@ -1,52 +1,37 @@
 #!/usr/bin/env python
 
-"""HASY with Tensorflow."""
+"""Train a NN on the HASY dataset with Tensorflow."""
 
+
+import tensorflow as tf
+tf.set_random_seed(0)  # make sure results are reproducible
+import tflearn
+from tflearn.layers.core import fully_connected
+import os
+import numpy as np
+np.random.seed(0)  # make sure results are reproducible
+import time
+import sys
+sys.path.append('/home/moose/GitHub/HASY/scripts')
 import input_data
 from classifier_comp import write_analyzation_results, pretty_print
 
-import tensorflow as tf
-import tflearn
-from tflearn.layers.core import fully_connected
-# import tflearn.utils as utils
-# import tflearn.variables as vs
-# from tensorflow.python.training import moving_averages
-# from tensorflow.python.framework import ops
-
-import os
-import numpy as np
-import time
-
-epochs = 100000  # 200000
-MODEL_NAME = 'i1-c32-m-c64-f1024-f369-relu'
+batch_size = 128
+epochs = 50000  # 200000
+MODEL_NAME = 'i1-c3-m-f369'
 model_checkpoint_path = 'checkpoints/hasy_%s_model.ckpt' % MODEL_NAME
 
 
 def eval_network(sess, summary_writer, dataset, correct_prediction, epoch,
-                 mode, make_summary=False):
+                 mode):
     """Evaluate the network."""
     correct_sum = 0
     total_test = 0
-    if mode == 'test' and make_summary:
-        training_summary = (tf.get_default_graph()
-                            ).get_tensor_by_name("training_accuracy:0")
-        loss_summary = tf.get_default_graph().get_tensor_by_name("loss:0")
-    for i in range(dataset.labels.shape[0] / 1000):
-        feed_dict = {x: dataset.images[i * 1000:(i + 1) * 1000],
-                     y_: dataset.labels[i * 1000:(i + 1) * 1000],
-                     # keep_prob: 1.0
-                     }
-
-        if mode == 'test' and make_summary:
-            out = sess.run([correct_prediction,
-                            training_summary,
-                            loss_summary],
-                           feed_dict=feed_dict)
-            [test_correct, train_summ, loss_summ] = out
-            summary_writer.add_summary(train_summ, epoch)
-            summary_writer.add_summary(loss_summ, epoch)
-        else:
-            test_correct = correct_prediction.eval(feed_dict=feed_dict)
+    batch_size = 1000
+    for i in range(dataset.labels.shape[0] / batch_size):
+        feed_dict = {x: dataset.images[i * batch_size:(i + 1) * batch_size],
+                     y_: dataset.labels[i * batch_size:(i + 1) * batch_size]}
+        test_correct = correct_prediction.eval(feed_dict=feed_dict)
         correct_sum += sum(test_correct)
         total_test += len(test_correct)
     return float(correct_sum) / total_test
@@ -90,6 +75,7 @@ for fold in range(1, 11):
     results = {}
 
     tf.reset_default_graph()  # Don't influence the other folds
+    tf.set_random_seed(0)  # make sure results are reproducible
     with tf.Session() as sess:
         x = tf.placeholder(tf.float32, shape=[None, 1024])
         y_ = tf.placeholder(tf.float32, shape=[None, 369])
@@ -152,31 +138,28 @@ for fold in range(1, 11):
                                                            global_step=step)
         correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(y_, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-        tf.summary.scalar("training_accuracy", accuracy)
-        tf.summary.scalar("loss", cross_entropy)
-
+        # tf.summary.scalar("training_accuracy", accuracy)
+        # tf.summary.scalar("loss", cross_entropy)
         # Add ops to save and restore all the variables.
         saver = tf.train.Saver()
         summary_writer = tf.summary.FileWriter('summary_dir', sess.graph)
 
         sess.run(tf.global_variables_initializer())
         model_checkpoint_path = get_nonexisting_path(model_checkpoint_path)
-        validation_curve_path = get_nonexisting_path('validation-curves/'
-                                                     'validation'
+        validation_curve_path = get_nonexisting_path('validation'
                                                      '-curve-accuracy-%s.csv' %
                                                      MODEL_NAME)
         print("model_checkpoint_path: %s" % model_checkpoint_path)
         print("validation_curve_path: %s" % validation_curve_path)
         t0 = time.time()
         for i in range(epochs):
-            batch = hasy.train.next_batch(50)
+            batch = hasy.train.next_batch(batch_size)
             if i % 500 == 0:
                 log_score(sess, summary_writer,
                           validation_curve_path,
                           hasy, correct_prediction, i)
             train_step.run(feed_dict={x: batch[0],
-                                      y_: batch[1],
-                                      # keep_prob: 0.5
+                                      y_: batch[1]
                                       })
         t1 = time.time()
         results['fit_time'] = t1 - t0
@@ -188,14 +171,13 @@ for fold in range(1, 11):
         print("Evaluate model")
         cm = np.zeros((369, 369), dtype=int)
         t0 = time.time()
-        batch_size = 128
         loops = int(len(hasy.test.images) / batch_size)
         if loops * batch_size < len(hasy.test.images):
             loops += 1
-        print(hasy.test.images.shape)
+
         for i in range(loops):
             data = hasy.test.images[i * batch_size:(i + 1) * batch_size]
-            data = data.reshape((-1, 1024))
+            data = data.reshape((-1, 32 * 32))
             predicted = tf.argmax(y_conv, 1).eval(feed_dict={x: data})
             actual = np.argmax(hasy.test.labels[i * batch_size:
                                                 (i + 1) * batch_size], 1)
