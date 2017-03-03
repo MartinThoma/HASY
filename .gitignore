@@ -92,3 +92,4 @@ scripts/validation-curves
 scripts/keras-models
 scripts/summary_dir
 scripts/checkpoints
+summary_dir/
