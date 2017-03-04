@@ -20,4 +20,5 @@
 | i1-c3-c3-c3       -f369 |     4 |  1134135   | 74.3     | 82.8      | 3.7       | 50k epochs - relu did not improve; used prelu
 | i1-c3-c3    -f1024-f369 |     4 |  3525097   | 75.2     | 99.6      | 3.3       | 50k epochs, prelu
 | i1-c3       -f1024-f369 |     3 |  3525091   | 77.7     | 88.7      | 2.6       | 50k epochs
+| i1-c32-m-c32-f1024-f369 |     5 |  8777425   | 79.1     | 97.6      | 2.2       | 50k epochs, relu
 | i1-c32-m-c64-f1024-f369 |     5 | 17175281   | 79.2     | 99.4      | 2.7       | 50k epochs, relu
