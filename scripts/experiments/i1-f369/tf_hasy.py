@@ -81,7 +81,7 @@ for fold in range(1, 11):
         y_ = tf.placeholder(tf.float32, shape=[None, 369])
         net = tf.reshape(x, [-1, 32, 32, 1])
         net = tflearn.layers.core.flatten(net, name='Flatten')
-        y_conv = fully_connected(x, 369,
+        y_conv = fully_connected(net, 369,
                                  activation='softmax',
                                  weights_init='truncated_normal',
                                  bias_init='zeros',
