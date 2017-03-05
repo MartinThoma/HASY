@@ -121,6 +121,7 @@ def pretty_print(classifier_data):
         train_times = np.array([el['training_time'] for el in clf_data])
         test_times = np.array([el['testing_time'] for el in clf_data])
         accuracy = np.array([el['accuracy'] for el in clf_data])
+        print("\tRuns:\t%i" % len(train_times))
         print("\ttrain_time:\t%0.1f (min=%0.2f, max=%0.2f)" %
               (train_times.mean(), train_times.min(), train_times.max()))
         print("\ttest_time:\t%0.1f (min=%0.2f, max=%0.2f)" %
@@ -281,7 +282,7 @@ def get_data(dataset='iris'):
 
         from sklearn.cross_validation import train_test_split
         x_train, x_test, y_train, y_test = train_test_split(x, y,
-                                                            test_size=1/7.,
+                                                            test_size=1 / 7.,
                                                             random_state=42)
         data = {'train': {'X': x_train,
                           'y': y_train},
