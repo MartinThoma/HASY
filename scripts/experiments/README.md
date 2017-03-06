@@ -24,6 +24,7 @@
 | i1-c32-m-c32  -f1024-f369 |     5 |  8777425   | 79.1     | 97.6      | 2.2       | 50k epochs, relu
 | i1-c32-m-c64  -f1024-f369 |     5 | 17175281   | 79.2     | 99.4      | 2.7       | 50k epochs, relu
 | i1-c8 -m-f1024-f1024-f369 |     5 |  3526081   | 79.5     | 89.0      | 1.8       | 50k epochs, elu
+| i1-c8 -m-f1024-f1024-f369 |     5 |  3526081   | 76.7     | 79.0      | ---       | 50k epochs, relu - batch 64 - extrem unterschiedliche Ergebnisse
 | i1-c8 -m-f1024-f1024-f369 |     5 |  3526081   | 79.7     | 85.2      | 1.7       | 50k epochs, relu
 | i1-c8 -m-f1024-f1024-f369 |     5 |  3526081   | 80.3     | 86.7      | 3.0       | 50k epochs, relu (with dropout after fc-layers)
 | i1-c32-m-f1024-f1024-f369 |     5 |  9817777   | 80.4     | 91.4      | 2.5       | 50k epochs, relu
