@@ -1,9 +1,3 @@
-Evaluate model
-i1-c3-m-f369:
-    train_time:    694.0 (min=651.70, max=724.29)
-    test_time:    2.0 (min=1.65, max=2.80)
-    acc:        54.9 (min=54.5, max=55.6)
-{'i1-c3-m-f369': [{'training_time': 664.5655269622803, 'testing_time': 2.7999751567840576, 'accuracy': 0.550376647834275}, {'training_time': 667.5361440181732, 'testing_time': 2.015876054763794, 'accuracy': 0.5563293006786663}, {'training_time': 722.4725329875946, 'testing_time': 2.0145809650421143, 'accuracy': 0.5519422929107787}, {'training_time': 706.056343793869, 'testing_time': 1.653944969177246, 'accuracy': 0.5469037037037037}, {'training_time': 723.9421689510345, 'testing_time': 2.020960807800293, 'accuracy': 0.544898443995724}, {'training_time': 664.0689470767975, 'testing_time': 1.6848468780517578, 'accuracy': 0.5477096966091612}, {'training_time': 651.6989870071411, 'testing_time': 1.9888949394226074, 'accuracy': 0.5484525016399309}, {'training_time': 721.0904111862183, 'testing_time': 1.9830060005187988, 'accuracy': 0.5491871862299785}, {'training_time': 724.290235042572, 'testing_time': 1.9198927879333496, 'accuracy': 0.5469517307461972}]}
 I tensorflow/core/common_runtime/gpu/gpu_device.cc:975] Creating TensorFlow device (/gpu:0) -> (device: 0, name: GeForce 940MX, pci bus id: 0000:02:00.0)
     shape: (3, 3, 1, 3)
     variable_parametes: 27
@@ -18,3 +12,16 @@ I tensorflow/core/common_runtime/gpu/gpu_device.cc:975] Creating TensorFlow devi
     variable_parametes: 369
     ---
 total_parameters: 283791
+model_checkpoint_path: checkpoints/hasy_i1-c3-m-f369_model.ckpt
+validation_curve_path: validation-curve-accuracy-i1-c3-m-f369-9.csv
+Evaluate model
+i1-c3-m-f369:
+    Runs:    10
+    train_time:    1210.1 (min=1041.03, max=1335.73)
+    test_time:    1.6 (min=1.54, max=1.75)
+    acc:        55.5 (min=55.0, max=56.3)
+{'i1-c3-m-f369': [{'training_time': 1041.0314610004425, 'testing_time': 1.610569953918457, 'accuracy': 0.5577330508474576}, {'training_time': 1073.4451820850372, 'testing_time': 1.5753870010375977, 'accuracy': 0.5630569489524934}, {'training_time': 1263.592553138733, 'testing_time': 1.5829200744628906, 'accuracy': 0.5586826701353989}, {'training_time': 1262.5201559066772, 'testing_time': 1.5510280132293701, 'accuracy': 0.5556148148148148}, {'training_time': 1318.9975559711456, 'testing_time': 1.5605559349060059, 'accuracy': 0.5513718968998693}, {'training_time': 1238.8889801502228, 'testing_time': 1.5577309131622314, 'accuracy': 0.5535990481856038}, {'training_time': 1335.732300043106, 'testing_time': 1.543532133102417, 'accuracy': 0.5543562526089808}, {'training_time': 1259.0088829994202, 'testing_time': 1.5512120723724365, 'accuracy': 0.5550442266316041}, {'training_time': 1144.088084936142, 'testing_time': 1.7521679401397705, 'accuracy': 0.5536591208527968}, {'training_time': 1163.8421618938446, 'testing_time': 1.7116820812225342, 'accuracy': 0.5496668867414921}]}
+
+real    12895,99s
+user    9160,82s
+sys    4702,54s
