@@ -18,6 +18,7 @@
 | i1-c3-c3              -f369 |     3 |  1134711   | 72.8     | 76.0      | 3.6       | 50k epochs - 8x8 filters
 | i1-c3-c3-c3-c3        -f369 |     5 |  1134231   | 73.4     | 89.1      | 4.5       | 50k epochs; prelu
 | i1-c3-c3-c3-m-c3      -f369 |     6 |   284055   | 74.3     | 80.9      | 4.0       | 50k epochs; prelu
+| i1        -f1024-f1024-f369 |     3 |  2477425   | 74.2     | 77.5      | 1.3       | 50k epochs
 | i1-c3-c3-c3           -f369 |     4 |  1134135   | 74.3     | 82.8      | 3.7       | 50k epochs - relu did not improve at all; used prelu
 | i1-c3-c3        -f1024-f369 |     4 |  3525097   | 75.2     | 99.6      | 3.3       | 50k epochs, prelu
 | i1-c3-c3        -f1024-f369 |     4 |  3525091   | 77.7     | 88.7      | 2.6       | 50k epochs
