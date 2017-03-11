@@ -34,4 +34,5 @@
 | i1-c8-c8-m-f1024-f1024-f369 |     6 |  3526665   | 79.8     | 93.1      | ---       | 50k epochs
 | i1-c8 -m  -f1024-f1024-f369 |     5 |  3526081   | 80.3     | 86.7      | 3.0       | 50k epochs (with dropout after fc-layers)
 | i1-c32-m  -f1024-f1024-f369 |     5 |  9817777   | 77.9     | 93.6      | 2.5       | 50k epochs, rmsprop
+| i1-c32-m  -f1024-f1024-f369 |     5 |  9817777   | 79.6     | 87.6      | 2.6       | 50k epochs - all ReLU (except output layer)
 | i1-c32-m  -f1024-f1024-f369 |     5 |  9817777   | 80.4     | 91.4      | 2.5       | 50k epochs
