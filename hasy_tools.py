@@ -6,6 +6,8 @@ Tools for the HASY dataset.
 
 Type `./hasy_tools.py --help` for the command line tools and `help(hasy_tools)`
 in the interactive Python shell for the module options of hasy_tools.
+
+See https://arxiv.org/abs/1701.08380 for details about the dataset.
 """
 
 import logging
@@ -24,12 +26,30 @@ import numpy as np
 np.random.seed(0)  # make sure results are reproducible
 import scipy.ndimage
 import matplotlib.pyplot as plt
+try:
+    from urllib.request import urlretrieve  # Python 3
+except ImportError:
+    from urllib import urlretrieve  # Python 2
+from six.moves.urllib.error import URLError
+from six.moves.urllib.error import HTTPError
+import tarfile
+import shutil
+from six.moves import cPickle as pickle
 
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
                     level=logging.INFO,
                     stream=sys.stdout)
 
-__version__ = "v2.3"
+__version__ = "v2.4"
+
+n_classes = 369
+labels = []
+WIDTH = 32
+HEIGHT = 32
+img_rows = 32
+img_cols = 32
+img_channels = 1
+symbol_id2index = None
 
 
 def _load_csv(filepath, delimiter=',', quotechar="'"):
@@ -72,18 +92,294 @@ def generate_index(csv_filepath):
 
     Returns
     -------
+    tuple of dict and a list
     dict : Maps a symbol_id as in test.csv and
         train.csv to an integer in 0...k, where k is the total
         number of unique labels.
+    list : LaTeX labels
     """
     symbol_id2index = {}
     data = _load_csv(csv_filepath)
     i = 0
+    labels = []
     for item in data:
         if item['symbol_id'] not in symbol_id2index:
             symbol_id2index[item['symbol_id']] = i
+            labels.append(item['latex'])
             i += 1
-    return symbol_id2index
+    return symbol_id2index, labels
+
+
+def _validate_file(fpath, md5_hash):
+    """
+    Validate a file against a MD5 hash.
+
+    Parameters
+    ----------
+    fpath: string
+        Path to the file being validated
+    md5_hash: string
+        The MD5 hash being validated against
+
+    Returns
+    ---------
+    bool
+        True, if the file is valid. Otherwise False.
+    """
+    hasher = hashlib.md5()
+    with open(fpath, 'rb') as f:
+        buf = f.read()
+        hasher.update(buf)
+    if str(hasher.hexdigest()) == str(md5_hash):
+        return True
+    else:
+        return False
+
+
+def _get_file(fname, origin, md5_hash=None, cache_subdir='~/.datasets'):
+    """
+    Download a file from a URL if it not already in the cache.
+
+    Passing the MD5 hash will verify the file after download
+    as well as if it is already present in the cache.
+
+    Parameters
+    ----------
+    fname: name of the file
+    origin: original URL of the file
+    md5_hash: MD5 hash of the file for verification
+    cache_subdir: directory being used as the cache
+
+    Returns
+    -------
+    Path to the downloaded file
+    """
+    datadir_base = os.path.expanduser("~/.datasets")
+    if not os.path.exists(datadir_base):
+        os.makedirs(datadir_base)
+    if not os.access(datadir_base, os.W_OK):
+        logging.warning("Could not access {}.".format(cache_subdir))
+        datadir_base = os.path.join('/tmp', '.data')
+    datadir = os.path.join(datadir_base, cache_subdir)
+    if not os.path.exists(datadir):
+        os.makedirs(datadir)
+
+    fpath = os.path.join(datadir, fname)
+
+    download = False
+    if os.path.exists(fpath):
+        # File found; verify integrity if a hash was provided.
+        if md5_hash is not None:
+            if not _validate_file(fpath, md5_hash):
+                print('A local file was found, but it seems to be '
+                      'incomplete or outdated.')
+                download = True
+    else:
+        download = True
+
+    if download:
+        print('Downloading data from {} to {}'.format(origin, fpath))
+        error_msg = 'URL fetch failure on {}: {} -- {}'
+        try:
+            try:
+                urlretrieve(origin, fpath)
+            except URLError as e:
+                raise Exception(error_msg.format(origin, e.errno, e.reason))
+            except HTTPError as e:
+                raise Exception(error_msg.format(origin, e.code, e.msg))
+        except (Exception, KeyboardInterrupt) as e:
+            if os.path.exists(fpath):
+                os.remove(fpath)
+            raise
+    return fpath
+
+
+def load_data(mode='fold-1', image_dim_ordering='tf'):
+    """
+    Load HASYv2 dataset.
+
+    Parameters
+    ----------
+    mode : string, optional (default: "complete")
+        - "complete" : Returns {'x': x, 'y': y} with all labeled data
+        - "fold-1": Returns {'x_train': x_train,
+                             'y_train': y_train,
+                             'x_test': x_test,
+                             'y_test': y_test}
+        - "fold-2", ..., "fold-10": See "fold-1"
+        - "verification": Returns {'train': {'x_train': List of loaded images,
+                                             'y_train': list of labels},
+                                   'test-v1': {'X1s': List of first images,
+                                               'X2s': List of second images,
+                                               'ys': List of labels
+                                                     'True' or 'False'}
+                                    'test-v2': {'X1s': List of first images,
+                                               'X2s': List of second images,
+                                               'ys': List of labels
+                                                     'True' or 'False'}
+                                    'test-v3': {'X1s': List of first images,
+                                               'X2s': List of second images,
+                                               'ys': List of labels
+                                                     'True' or 'False'}}
+    image_dim_ordering : 'th' for theano or 'tf' for tensorflow (default: 'tf')
+
+    Returns
+    -------
+    dict
+        See "mode" parameter for details.
+
+        All 'x..' keys contain a uint8 numpy array [index, y, x, depth] (or
+        [index, depth, y, x] for image_dim_ordering='t')
+
+        All 'y..' keys contain a 2D uint8 numpy array [[label]]
+
+    """
+    # Download if not already done
+    fname = 'HASYv2.tar.bz2'
+    origin = 'https://zenodo.org/record/259444/files/HASYv2.tar.bz2'
+    fpath = _get_file(fname, origin=origin,
+                      md5_hash='fddf23f36e24b5236f6b3a0880c778e3',
+                      cache_subdir='HASYv2')
+    path = os.path.dirname(fpath)
+
+    # Extract content if not already done
+    untar_fpath = os.path.join(path, "HASYv2")
+    if not os.path.exists(untar_fpath):
+        print('Extract contents from archive...')
+        tfile = tarfile.open(fpath, 'r:bz2')
+        try:
+            tfile.extractall(path=untar_fpath)
+        except (Exception, KeyboardInterrupt) as e:
+            if os.path.exists(untar_fpath):
+                if os.path.isfile(untar_fpath):
+                    os.remove(untar_fpath)
+                else:
+                    shutil.rmtree(untar_fpath)
+            raise
+        tfile.close()
+
+    # Create pickle if not already done
+    pickle_fpath = os.path.join(untar_fpath, "hasy-data.pickle")
+    if not os.path.exists(pickle_fpath):
+        # Load mapping from symbol names to indices
+        symbol_csv_fpath = os.path.join(untar_fpath, "symbols.csv")
+        symbol_id2index, labels = generate_index(symbol_csv_fpath)
+        globals()["labels"] = labels
+        globals()["symbol_id2index"] = symbol_id2index
+
+        # Load data
+        data_csv_fpath = os.path.join(untar_fpath, "hasy-data-labels.csv")
+        data_csv = _load_csv(data_csv_fpath)
+        x_compl = np.zeros((len(data_csv), 1, WIDTH, HEIGHT), dtype=np.uint8)
+        y_compl = []
+        s_compl = []
+        path2index = {}
+
+        # Load HASYv2 data
+        for i, data_item in enumerate(data_csv):
+            fname = os.path.join(untar_fpath, data_item['path'])
+            s_compl.append(fname)
+            x_compl[i, 0, :, :] = scipy.ndimage.imread(fname,
+                                                       flatten=False,
+                                                       mode='L')
+            label = symbol_id2index[data_item['symbol_id']]
+            y_compl.append(label)
+            path2index[fname] = i
+        y_compl = np.array(y_compl, dtype=np.int64)
+
+        data = {'x': x_compl,
+                'y': y_compl,
+                's': s_compl,
+                'labels': labels,
+                'path2index': path2index}
+
+        # Store data as pickle to speed up later calls
+        with open(pickle_fpath, 'wb') as f:
+            pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
+    else:
+        with open(pickle_fpath, 'rb') as f:
+            data = pickle.load(f)
+        globals()["labels"] = data['labels']
+
+    labels = data['labels']
+    x_compl = data['x']
+    y_compl = np.reshape(data['y'], (len(data['y']), 1))
+    s_compl = data['s']
+    path2index = data['path2index']
+
+    if image_dim_ordering == 'tf':
+        x_compl = x_compl.transpose(0, 2, 3, 1)
+
+    if mode == 'complete':
+        return {'x': x_compl, 'y': y_compl}
+    elif mode.startswith('fold-'):
+        fold = int(mode.split("-")[1])
+        if fold < 1 or fold > 10:
+            raise NotImplementedError
+
+        # Load fold
+        fold_dir = os.path.join(untar_fpath,
+                                "classification-task/fold-{}".format(fold))
+        train_csv_fpath = os.path.join(fold_dir, "train.csv")
+        test_csv_fpath = os.path.join(fold_dir, "test.csv")
+        train_csv = _load_csv(train_csv_fpath)
+        test_csv = _load_csv(test_csv_fpath)
+
+        train_ids = np.array([path2index[row['path']] for row in train_csv])
+        test_ids = np.array([path2index[row['path']] for row in test_csv])
+
+        x_train = x_compl[train_ids]
+        x_test = x_compl[test_ids]
+        y_train = y_compl[train_ids]
+        y_test = y_compl[test_ids]
+        s_train = [s_compl[id_] for id_ in train_ids]
+        s_test = [s_compl[id_] for id_ in test_ids]
+
+        data = {'x_train': x_train,
+                'y_train': y_train,
+                'x_test': x_test,
+                'y_test': y_test,
+                's_train': s_train,
+                's_test': s_test,
+                'labels': labels
+                }
+        return data
+    elif mode == 'verification':
+        # Load the data
+        symbol_id2index = globals()["symbol_id2index"]
+        base_ = os.path.join(untar_fpath, "verification-task")
+
+        # Load train data
+        train_csv_fpath = os.path.join(base_, "train.csv")
+        train_csv = _load_csv(train_csv_fpath)
+        train_ids = np.array([path2index[row['path']] for row in train_csv])
+        x_train = x_compl[train_ids]
+        y_train = y_compl[train_ids]
+        s_train = [s_compl[id_] for id_ in train_ids]
+
+        # Load test data
+        test1_csv_fpath = os.path.join(base_, 'test-v1.csv')
+        test2_csv_fpath = os.path.join(base_, 'test-v2.csv')
+        test3_csv_fpath = os.path.join(base_, 'test-v3.csv')
+
+        tmp1 = _load_images_verification_test(test1_csv_fpath,
+                                              x_compl,
+                                              path2index)
+        tmp2 = _load_images_verification_test(test2_csv_fpath,
+                                              x_compl,
+                                              path2index)
+        tmp3 = _load_images_verification_test(test3_csv_fpath,
+                                              x_compl,
+                                              path2index)
+        data = {'train': {'x_train': x_train,
+                          'y_train': y_train,
+                          'source': s_train},
+                'test-v1': tmp1,
+                'test-v2': tmp2,
+                'test-v3': tmp3}
+        return data
+    else:
+        raise NotImplementedError
 
 
 def load_images(csv_filepath, symbol_id2index,
@@ -152,23 +448,18 @@ def load_images(csv_filepath, symbol_id2index,
     return data
 
 
-def _load_images_verification_test(csv_filepath,
-                                   flatten=False,
-                                   normalize=True,
-                                   shuffle=True):
+def _load_images_verification_test(csv_filepath, x_compl, path2index):
     """
     Load images from the verification test files.
 
     Parameters
     ----------
     csv_filepath : str
-        'test-v1.csv' or 'test-v2.csv' or 'test-v3.csv'
-    flatten : bool, optional (default: False)
-        Flatten feature vector
-    normalize : bool, optional (default: True)
-        Noramlize features to {0.0, 1.0}
-    shuffle : bool, optional (default: True)
-        Shuffle loaded data
+        Path to 'test-v1.csv' or 'test-v2.csv' or 'test-v3.csv'
+    x_compl : numpy array
+        Complete hasy data
+    path2index : dict
+        Map paths to indices of x_compl
 
     Returns
     -------
@@ -178,47 +469,18 @@ def _load_images_verification_test(csv_filepath,
         labels contains either True or False
         sources contains strings
     """
-    data = _load_csv(csv_filepath)
-    WIDTH, HEIGHT = 32, 32
-    if flatten:
-        x1s = np.zeros((len(data), WIDTH * HEIGHT))
-        x2s = np.zeros((len(data), WIDTH * HEIGHT))
-    else:
-        x1s = np.zeros((len(data), WIDTH, HEIGHT, 1))
-        x2s = np.zeros((len(data), WIDTH, HEIGHT, 1))
-    labels, sources = [], []
-    for i, data_item in enumerate(data):
-        sources.append((data_item['path1'], data_item['path2']))
-        if flatten:
-            img1 = scipy.ndimage.imread(data_item['path1'],
-                                        flatten=False, mode='L')
-            img2 = scipy.ndimage.imread(data_item['path2'],
-                                        flatten=False, mode='L')
-            x1s[i, :] = img1.flatten()
-            x2s[i, :] = img2.flatten()
-        else:
-            x1s[i, :, :, 0] = scipy.ndimage.imread(data_item['path1'],
-                                                   flatten=False,
-                                                   mode='L')
-            x2s[i, :, :, 0] = scipy.ndimage.imread(data_item['path2'],
-                                                   flatten=False,
-                                                   mode='L')
-        labels.append(float(data_item['is_same'] == 'True'))
-    # Make sure the type of images is float32
-    x1s = np.array(x1s, dtype=np.float32)
-    x2s = np.array(x1s, dtype=np.float32)
-    if normalize:
-        x1s /= 255.0
-        x2s /= 255.0
-    data = [x1s, x2s, np.array(labels), sources]
-    if shuffle:
-        perm = np.arange(len(labels))
-        np.random.shuffle(perm)
-        data[0] = data[0][perm]
-        data[1] = data[1][perm]
-        data[2] = data[2][perm]
-        data[3] = [data[3][index] for index in perm]
-    return data
+    test1_csv = _load_csv(csv_filepath)
+    test1_x1_ids = np.array([path2index[row['path1']]
+                             for row in test1_csv])
+    test1_x2_ids = np.array([path2index[row['path2']]
+                             for row in test1_csv])
+    test1_ys = np.array([row['is_same'] == 'True' for row in test1_csv],
+                        dtype=np.float64)
+    test1_sources = [(row['path1'], row['path2']) for row in test1_csv]
+    return {'X1s': x_compl[test1_x1_ids],
+            'X2s': x_compl[test1_x2_ids],
+            'ys': test1_ys,
+            'sources': test1_sources}
 
 
 def _maybe_download(expected_files, work_directory='HASYv2'):
@@ -288,134 +550,6 @@ def _get_data(dataset_path):
     _maybe_extract(tar_filepath, dataset_path)
 
 
-def load_data(fold=1,
-              dataset_path='../',
-              one_hot=False,
-              normalize=True,
-              shuffle=True,
-              flatten=True):
-    """
-    Load the HASY data.
-
-    Parameters
-    ----------
-    fold : 1, 2, 3, 4, 5, 6, 7, 8, 9, or 10, optional (default: 1)
-    dataset_path : str, optional (default: '../')
-    one_hot : bool, optional (default: False)
-        Encoding of labels
-    normalize : bool, optional (default: True)
-        Noramlize features to {0.0, 1.0}
-    shuffle : bool, optional (default: True)
-        Shuffle loaded data
-    flatten : bool, optional (default: True)
-        Flatten feature vector
-
-    Returns
-    -------
-    dict
-        keys: 'train', 'test', 'n_classes'
-        where 'train' and test are both dicts with keys 'X', 'y' and 'source'
-    """
-    # Make sure the data is there
-    _get_data(dataset_path)
-
-    # Load the data
-    symbol_id2index = generate_index("{}/symbols.csv".format(dataset_path))
-    base_ = "{}/classification-task/fold".format(dataset_path)
-    x_train, y_train, s_train = load_images('%s-%i/train.csv' % (base_, fold),
-                                            symbol_id2index,
-                                            one_hot=one_hot,
-                                            normalize=normalize,
-                                            shuffle=shuffle,
-                                            flatten=flatten)
-    x_test, y_test, s_test = load_images('%s-%i/test.csv' % (base_, fold),
-                                         symbol_id2index,
-                                         one_hot=one_hot,
-                                         normalize=normalize,
-                                         shuffle=shuffle,
-                                         flatten=flatten)
-    data = {'train': {'X': x_train,
-                      'y': y_train,
-                      'source': s_train},
-            'test': {'X': x_test,
-                     'y': y_test,
-                     'source': s_test},
-            'n_classes': 369}
-    return data
-
-
-def load_data_verification(dataset_path='../',
-                           one_hot=True,
-                           normalize=True,
-                           shuffle=True,
-                           flatten=False):
-    """
-    Load the data for the verification task.
-
-    Parameters
-    ----------
-    dataset_path : str, optional (default: '../')
-        Path to the HASY main directory
-    one_hot : bool, optional (default: True)
-        Encoding of labels
-    normalize: bool, optional (default: True)
-        Noramlize features to {0.0, 1.0}
-    shuffle : bool, optional (default: True)
-        Shuffle loaded data
-    flatten : bool, optional (default: False)
-        Flatten feature vector
-
-    Returns
-    -------
-    dict
-        with keys 'train' = {'X': List of loaded images, 'y': list of labels}
-        and 'test-v1' = {'X1s': List of first images,
-                         'X2s': List of second images,
-                         'ys': List of labels 'True' or 'False'}
-        and 'test-v2' and 'test-v3' with the same structure as 'test-v1'.
-    """
-    # Make sure the data is there
-    _get_data(dataset_path)
-
-    # Load the data
-    symbol_id2index = generate_index("{}/symbols.csv".format(dataset_path))
-    base_ = "{}/verification-task/".format(dataset_path)
-    x_train, y_train, s_train = load_images('%s/train.csv' % base_,
-                                            symbol_id2index,
-                                            one_hot=one_hot,
-                                            normalize=normalize,
-                                            shuffle=shuffle,
-                                            flatten=flatten)
-    tmp1 = _load_images_verification_test('%s/test-v1.csv' % base_,
-                                          flatten=flatten,
-                                          normalize=normalize,
-                                          shuffle=shuffle)
-    tmp2 = _load_images_verification_test('%s/test-v2.csv' % base_,
-                                          flatten=flatten,
-                                          normalize=normalize,
-                                          shuffle=shuffle)
-    tmp3 = _load_images_verification_test('%s/test-v3.csv' % base_,
-                                          flatten=flatten,
-                                          normalize=normalize,
-                                          shuffle=shuffle)
-    data = {'train': {'X': x_train,
-                      'y': y_train,
-                      'source': s_train},
-            'test-v1': {'X1s': tmp1[0],
-                        'X2s': tmp1[1],
-                        'ys': tmp1[2],
-                        'sources': tmp1[3]},
-            'test-v2': {'X1s': tmp2[0],
-                        'X2s': tmp2[1],
-                        'ys': tmp2[2],
-                        'sources': tmp2[3]},
-            'test-v3': {'X1s': tmp3[0],
-                        'X2s': tmp3[1],
-                        'ys': tmp3[2],
-                        'sources': tmp3[3]}}
-    return data
-
-
 def _is_valid_png(filepath):
     """
     Check if the PNG image is valid.
@@ -437,16 +571,14 @@ def _is_valid_png(filepath):
         return False
 
 
-def _verify_all():
+def _verify_all(csv_data_path):
     """Verify all PNG files in the training and test directories."""
-    for csv_data_path in ['classification-task/fold-1/test.csv',
-                          'classification-task/fold-1/train.csv']:
-        train_data = _load_csv(csv_data_path)
-        for data_item in train_data:
-            if not _is_valid_png(data_item['path']):
-                logging.info("%s is invalid." % data_item['path'])
-        logging.info("Checked %i items of %s." %
-                     (len(train_data), csv_data_path))
+    train_data = _load_csv(csv_data_path)
+    for data_item in train_data:
+        if not _is_valid_png(data_item['path']):
+            logging.info("%s is invalid." % data_item['path'])
+    logging.info("Checked %i items of %s." %
+                 (len(train_data), csv_data_path))
 
 
 def create_random_overview(img_src, x_images, y_images):
@@ -547,16 +679,20 @@ def _get_color_statistics(csv_filepath, verbose=False):
         classes.append(symbol_id)
         if verbose:
             print("%s:\t%0.4f" % (symbol_id, black_level[-1]))
-    print("Average black level: %0.4f" % np.average(black_level))
-    print("Median black level: %0.4f" % np.median(black_level))
-    print("Minimum black level: %0.4f (class: %s)" %
-          (min(black_level),
-           [symbolid2latex[c]
-            for bl, c in zip(black_level, classes) if bl <= min(black_level)]))
-    print("Maximum black level: %0.4f (class: %s)" %
-          (max(black_level),
-           [symbolid2latex[c]
-            for bl, c in zip(black_level, classes) if bl >= max(black_level)]))
+    print("Average black level: {:0.2f}%"
+          .format(np.average(black_level) * 100))
+    print("Median black level: {:0.2f}%"
+          .format(np.median(black_level) * 100))
+    print("Minimum black level: {:0.2f}% (class: {})"
+          .format(min(black_level),
+                  [symbolid2latex[c]
+                  for bl, c in zip(black_level, classes)
+                  if bl <= min(black_level)]))
+    print("Maximum black level: {:0.2f}% (class: {})"
+          .format(max(black_level),
+                  [symbolid2latex[c]
+                  for bl, c in zip(black_level, classes)
+                  if bl >= max(black_level)]))
 
 
 def _get_symbolid2latex(csv_filepath='symbols.csv'):
@@ -572,11 +708,11 @@ def _analyze_class_distribution(csv_filepath,
                                 max_data,
                                 bin_size):
     """Plot the distribution of training data over graphs."""
-    symbol_id2index = generate_index(csv_filepath)
+    symbol_id2index, labels = generate_index(csv_filepath)
     index2symbol_id = {}
     for index, symbol_id in symbol_id2index.items():
         index2symbol_id[symbol_id] = index
-    data, y = load_images(csv_filepath, symbol_id2index, one_hot=False)
+    data, y, s = load_images(csv_filepath, symbol_id2index, one_hot=False)
 
     data = {}
     for el in y:
@@ -642,8 +778,8 @@ def _analyze_pca(csv_filepath):
     from sklearn.decomposition import PCA
     import itertools as it
 
-    symbol_id2index = generate_index(csv_filepath)
-    data, y = load_images(csv_filepath, symbol_id2index, one_hot=False)
+    symbol_id2index, labels = generate_index(csv_filepath)
+    data, y, s = load_images(csv_filepath, symbol_id2index, one_hot=False)
     data = data.reshape(data.shape[0], data.shape[1] * data.shape[2])
     pca = PCA()
     pca.fit(data)
@@ -733,8 +869,8 @@ def _analyze_distances(csv_filepath):
 
 def _analyze_variance(csv_filepath):
     """Calculate the variance of each pixel."""
-    symbol_id2index = generate_index(csv_filepath)
-    data, y = load_images(csv_filepath, symbol_id2index, one_hot=False)
+    symbol_id2index, labels = generate_index(csv_filepath)
+    data, y, s = load_images(csv_filepath, symbol_id2index, one_hot=False)
     # Calculate mean
     sum_ = np.zeros((32, 32))
     for el in data:
@@ -768,11 +904,11 @@ def _analyze_correlation(csv_filepath):
     from matplotlib import pyplot as plt
     from matplotlib import cm as cm
 
-    symbol_id2index = generate_index(csv_filepath)
-    data, y = load_images(csv_filepath,
-                          symbol_id2index,
-                          one_hot=False,
-                          flatten=True)
+    symbol_id2index, labels = generate_index(csv_filepath)
+    data, y, s = load_images(csv_filepath,
+                             symbol_id2index,
+                             one_hot=False,
+                             flatten=True)
     df = pd.DataFrame(data=data)
 
     logging.info("Data loaded. Start correlation calculation. Takes 1.5h.")
@@ -788,7 +924,7 @@ def _analyze_correlation(csv_filepath):
     labels = ax1.get_xticklabels()
     plt.setp(labels, rotation=30)
 
-    cmap = cm.get_cmap('jet', 30)
+    cmap = cm.get_cmap('viridis', 30)
     cax = ax1.imshow(df.corr(), interpolation="nearest", cmap=cmap)
     ax1.grid(True)
     # Add colorbar, make sure to specify tick locations to match desired
@@ -976,7 +1112,7 @@ def _analyze_cm(cm_file, total_symbols=100):
         cm[i][j] indicates how often members of class i were labeled with j
     """
     symbolid2latex = _get_symbolid2latex()
-    symbol_id2index = generate_index('hasy-data-labels.csv')
+    symbol_id2index, labels = generate_index('hasy-data-labels.csv')
     index2symbol_id = {}
     for index, symbol_id in symbol_id2index.items():
         index2symbol_id[symbol_id] = index
@@ -1051,6 +1187,13 @@ def _analyze_cm(cm_file, total_symbols=100):
     # scipy.misc.imshow(cm)
 
 
+def preprocess(x):
+    """Preprocess features."""
+    x = x.astype('float32')
+    x /= 255.0
+    return x
+
+
 def _get_parser():
     """Get parser object for hasy_tools.py."""
     import argparse
@@ -1059,7 +1202,6 @@ def _get_parser():
                             formatter_class=ArgumentDefaultsHelpFormatter)
     parser.add_argument("--dataset",
                         dest="dataset",
-                        default='classification-task/fold-1/train.csv',
                         help="specify which data to use")
     parser.add_argument("--verify",
                         dest="verify",
@@ -1128,7 +1270,10 @@ def _get_parser():
 if __name__ == "__main__":
     args = _get_parser().parse_args()
     if args.verify:
-        _verify_all()
+        if args.dataset is None:
+            logging.error("--dataset needs to be set for --verify")
+            sys.exit()
+        _verify_all(args.dataset)
     if args.overview:
         img_src = _load_csv(args.dataset)
         create_random_overview(img_src, x_images=10, y_images=10)

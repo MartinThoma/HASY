@@ -10,7 +10,6 @@ Gets to 77.77% test accuracy after 1 epoch.
 from __future__ import print_function
 import numpy as np
 np.random.seed(0)  # make sure results are reproducible
-import os
 
 import tensorflow as tf
 tf.set_random_seed(0)  # make sure results are reproducible
@@ -27,36 +26,32 @@ batch_size = 128
 nb_epoch = 1
 
 # input image dimensions
-img_rows, img_cols = 32, 32
+img_rows, img_cols = ht.img_rows, ht.img_cols
 
 # Load data
 fold = 1
-dataset_path = os.path.join(os.path.expanduser("~"), 'hasy')
-hasy_data = ht.load_data(fold=fold,
-                         normalize=True,
-                         one_hot=True,
-                         dataset_path=dataset_path)
-train_x = hasy_data['train']['X']
-train_y = hasy_data['train']['y']
-test_x = hasy_data['test']['X']
-test_y = hasy_data['test']['y']
+hasy_data = ht.load_data(mode='fold-{}'.format(fold), image_dim_ordering='tf')
 
-if K.image_dim_ordering() == 'th':
-    train_x = train_x.reshape(train_x.shape[0], 1, img_rows, img_cols)
-    test_x = test_x.reshape(test_x.shape[0], 1, img_rows, img_cols)
-    input_shape = (1, img_rows, img_cols)
-else:
-    train_x = train_x.reshape(train_x.shape[0], img_rows, img_cols, 1)
-    test_x = test_x.reshape(test_x.shape[0], img_rows, img_cols, 1)
-    input_shape = (img_rows, img_cols, 1)
+x_train = hasy_data['x_train']
+y_train = hasy_data['y_train']
+x_test = hasy_data['x_test']
+y_test = hasy_data['y_test']
+
+# One-Hot encoding
+y_train = np.eye(ht.n_classes)[y_train.squeeze()]
+y_test = np.eye(ht.n_classes)[y_test.squeeze()]
+
+# Preprocessing
+x_train = ht.preprocess(x_train)
+x_test = ht.preprocess(x_test)
 
 # Define model
 model = Sequential()
-model.add(Convolution2D(32, 3, 3,
-                        border_mode='same',
-                        input_shape=input_shape))
+model.add(Convolution2D(32, (3, 3),
+                        padding='same',
+                        input_shape=x_train.shape[1:]))
 model.add(PReLU())
-model.add(Convolution2D(64, 3, 3, border_mode='same'))
+model.add(Convolution2D(64, (3, 3), padding='same'))
 model.add(PReLU())
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Dropout(0.25))
@@ -64,7 +59,7 @@ model.add(Dropout(0.25))
 model.add(Flatten())
 model.add(Dense(1024, activation='tanh'))
 model.add(Dropout(0.5))
-model.add(Dense(hasy_data['n_classes'], activation='softmax'))
+model.add(Dense(ht.n_classes, activation='softmax'))
 
 # Train model
 adam = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
@@ -72,16 +67,17 @@ model.compile(loss='categorical_crossentropy',
               optimizer=adam,
               metrics=['accuracy'])
 
-model.fit(train_x, train_y, batch_size=batch_size, nb_epoch=nb_epoch,
-          verbose=1, validation_data=(test_x, test_y))
+model.fit(x_train, y_train, batch_size=batch_size, epochs=nb_epoch,
+          verbose=1, validation_data=(x_test, y_test))
 
 # Serialize model
 model.save('my_keras_model.h5')
 
 # Evaluate model
-score = model.evaluate(test_x, test_y, verbose=0)
-print('Test accuarcy: %0.4f%%' % (score[1] * 100))
+score = model.evaluate(x_test, y_test, verbose=0)
+print('Test accuarcy: {:0.2f}%'.format(score[1] * 100))
 
 # Run the model on one example
-prediction = model.predict(test_x[0].reshape(-1, 1, img_rows, img_cols))
-print("Prediction: %s" % str(prediction[0][:3]))  # only show first 3 probas
+prediction = model.predict(x_test[0].reshape(-1, 1, img_rows, img_cols))
+# only show first 3 probabilities
+print("Prediction: {}".format(str(prediction[0][:3])))
