@@ -69,7 +69,7 @@ def _load_csv(filepath, delimiter=',', quotechar="'"):
     """
     data = []
     csv_dir = os.path.dirname(filepath)
-    with open(filepath, 'rb') as csvfile:
+    with open(filepath, 'r') as csvfile:
         reader = csv.DictReader(csvfile,
                                 delimiter=delimiter,
                                 quotechar=quotechar)
