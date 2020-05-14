@@ -93,3 +93,5 @@ scripts/keras-models
 scripts/summary_dir
 scripts/checkpoints
 summary_dir/
+
+tests/reports/

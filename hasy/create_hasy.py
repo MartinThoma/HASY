@@ -99,15 +99,27 @@ def generate_dataset(data, symbols_dict, directory):
         a = csv.writer(f, delimiter=',')
         a.writerows(labels)
 
-symbols_df = load_csv('2015-01-28-data/symbols.csv')
-symbols = {}
-for row in symbols_df:
-    symbols[row['symbol_id']] = row['latex']
 
-data = load_dataset('2015-01-28-data/test-data.csv')
-print("Start loading train data...")
-data = data + load_dataset('2015-01-28-data/train-data.csv')
+def main():
+    """Generate the dataset."""
+    data_dir = os.path.abspath('2015-01-28-data')
+    if not os.path.isdir(data_dir):
+        print(f"Please download https://zenodo.org/record/50022 and extract "
+              f"it to {data_dir}")
+        return
+    symbols_df = load_csv('2015-01-28-data/symbols.csv')
+    symbols = {}
+    for row in symbols_df:
+        symbols[row['symbol_id']] = row['latex']
 
-generate_dataset(data,
-                 symbols,
-                 directory='hasy-data')
+    data = load_dataset('2015-01-28-data/test-data.csv')
+    print("Start loading train data...")
+    data = data + load_dataset('2015-01-28-data/train-data.csv')
+
+    generate_dataset(data,
+                     symbols,
+                     directory='hasy-data')
+
+
+if __name__ == '__main__':
+    main()
