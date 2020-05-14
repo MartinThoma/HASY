@@ -7,17 +7,17 @@ Gets to 77.77% test accuracy after 1 epoch.
 790 seconds per epoch on a GeForce 940MX GPU.
 """
 
-from __future__ import print_function
+
+# Third party modules
 import numpy as np
-
 import tensorflow as tf
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten
-from keras.layers import Convolution2D, MaxPooling2D
-from keras.layers.advanced_activations import PReLU
-from keras.optimizers import Adam
 from keras import backend as K  # noqa
+from keras.layers import Convolution2D, Dense, Dropout, Flatten, MaxPooling2D
+from keras.layers.advanced_activations import PReLU
+from keras.models import Sequential
+from keras.optimizers import Adam
 
+# First party modules
 import hasy.hasy_tools as ht
 
 np.random.seed(0)  # make sure results are reproducible
@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     # Load data
     fold = 1
-    hasy_data = ht.load_data(mode="fold-{}".format(fold), image_dim_ordering="tf")
+    hasy_data = ht.load_data(mode=f"fold-{fold}", image_dim_ordering="tf")
 
     x_train = hasy_data["x_train"]
     y_train = hasy_data["y_train"]

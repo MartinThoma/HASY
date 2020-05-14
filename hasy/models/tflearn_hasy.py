@@ -7,10 +7,12 @@ Gets to 76.78% test accuracy after 1 epoch.
 673 seconds per epoch on a GeForce 940MX GPU.
 """
 
+# Third party modules
 import numpy as np
 import tensorflow as tf
-import hasy.hasy_tools as ht
 
+# First party modules
+import hasy.hasy_tools as ht
 
 np.random.seed(0)  # make sure results are reproducible
 tf.random.set_seed(0)  # make sure results are reproducible
@@ -29,7 +31,7 @@ if __name__ == "__main__":
 
     # Load data
     fold = 1
-    hasy_data = ht.load_data(mode="fold-{}".format(fold), image_dim_ordering="tf")
+    hasy_data = ht.load_data(mode=f"fold-{fold}", image_dim_ordering="tf")
 
     x_train = hasy_data["x_train"]
     y_train = hasy_data["y_train"]

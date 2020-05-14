@@ -1,76 +1,122 @@
-from hasy.hasy_tools import *
+#!/usr/bin/env python
+
+# Core Library modules
+import logging
+import sys
+
+# First party modules
+from hasy.hasy_tools import (
+    _analyze_class_distribution,
+    _analyze_cm,
+    _analyze_correlation,
+    _analyze_distances,
+    _analyze_pca,
+    _analyze_variance,
+    _count_users,
+    _create_stratified_split,
+    _create_verification_task,
+    _get_color_statistics,
+    _load_csv,
+    _verify_all,
+    create_random_overview,
+)
 
 
 def _get_parser():
     """Get parser object for hasy_tools.py."""
     import argparse
     from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
-    parser = ArgumentParser(description=__doc__,
-                            formatter_class=ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--dataset",
-                        dest="dataset",
-                        help="specify which data to use")
-    parser.add_argument("--verify",
-                        dest="verify",
-                        action="store_true",
-                        default=False,
-                        help="verify PNG files")
-    parser.add_argument("--overview",
-                        dest="overview",
-                        action="store_true",
-                        default=False,
-                        help="Get overview of data")
-    parser.add_argument("--analyze_color",
-                        dest="analyze_color",
-                        action="store_true",
-                        default=False,
-                        help="Analyze the color distribution")
-    parser.add_argument("--class_distribution",
-                        dest="class_distribution",
-                        action="store_true",
-                        default=False,
-                        help="Analyze the class distribution")
-    parser.add_argument("--distances",
-                        dest="distances",
-                        action="store_true",
-                        default=False,
-                        help="Analyze the euclidean distance distribution")
-    parser.add_argument("--pca",
-                        dest="pca",
-                        action="store_true",
-                        default=False,
-                        help=("Show how many principal components explain "
-                              "90%% / 95%% / 99%% of the variance"))
-    parser.add_argument("--variance",
-                        dest="variance",
-                        action="store_true",
-                        default=False,
-                        help="Analyze the variance of features")
-    parser.add_argument("--correlation",
-                        dest="correlation",
-                        action="store_true",
-                        default=False,
-                        help="Analyze the correlation of features")
-    parser.add_argument("--create-classification-task",
-                        dest="create_folds",
-                        action="store_true",
-                        default=False,
-                        help=argparse.SUPPRESS)
-    parser.add_argument("--create-verification-task",
-                        dest="create_verification_task",
-                        action="store_true",
-                        default=False,
-                        help=argparse.SUPPRESS)
-    parser.add_argument("--count-users",
-                        dest="count_users",
-                        action="store_true",
-                        default=False,
-                        help="Count how many different users have created "
-                             "the dataset")
-    parser.add_argument("--analyze-cm",
-                        dest="cm",
-                        default=False,
-                        help="Analyze a confusion matrix in JSON format.")
+
+    parser = ArgumentParser(
+        description=__doc__, formatter_class=ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument("--dataset", dest="dataset", help="specify which data to use")
+    parser.add_argument(
+        "--verify",
+        dest="verify",
+        action="store_true",
+        default=False,
+        help="verify PNG files",
+    )
+    parser.add_argument(
+        "--overview",
+        dest="overview",
+        action="store_true",
+        default=False,
+        help="Get overview of data",
+    )
+    parser.add_argument(
+        "--analyze_color",
+        dest="analyze_color",
+        action="store_true",
+        default=False,
+        help="Analyze the color distribution",
+    )
+    parser.add_argument(
+        "--class_distribution",
+        dest="class_distribution",
+        action="store_true",
+        default=False,
+        help="Analyze the class distribution",
+    )
+    parser.add_argument(
+        "--distances",
+        dest="distances",
+        action="store_true",
+        default=False,
+        help="Analyze the euclidean distance distribution",
+    )
+    parser.add_argument(
+        "--pca",
+        dest="pca",
+        action="store_true",
+        default=False,
+        help=(
+            "Show how many principal components explain "
+            "90%% / 95%% / 99%% of the variance"
+        ),
+    )
+    parser.add_argument(
+        "--variance",
+        dest="variance",
+        action="store_true",
+        default=False,
+        help="Analyze the variance of features",
+    )
+    parser.add_argument(
+        "--correlation",
+        dest="correlation",
+        action="store_true",
+        default=False,
+        help="Analyze the correlation of features",
+    )
+    parser.add_argument(
+        "--create-classification-task",
+        dest="create_folds",
+        action="store_true",
+        default=False,
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--create-verification-task",
+        dest="create_verification_task",
+        action="store_true",
+        default=False,
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--count-users",
+        dest="count_users",
+        action="store_true",
+        default=False,
+        help="Count how many different users have created " "the dataset",
+    )
+    parser.add_argument(
+        "--analyze-cm",
+        dest="cm",
+        default=False,
+        help="Analyze a confusion matrix in JSON format.",
+    )
     return parser
 
 
@@ -87,9 +133,9 @@ if __name__ == "__main__":
     if args.analyze_color:
         _get_color_statistics(csv_filepath=args.dataset)
     if args.class_distribution:
-        _analyze_class_distribution(csv_filepath=args.dataset,
-                                    max_data=1000,
-                                    bin_size=25)
+        _analyze_class_distribution(
+            csv_filepath=args.dataset, max_data=1000, bin_size=25
+        )
     if args.pca:
         _analyze_pca(csv_filepath=args.dataset)
     if args.distances:
