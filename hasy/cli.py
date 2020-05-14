@@ -21,6 +21,12 @@ from hasy.hasy_tools import (
     create_random_overview,
 )
 
+logging.basicConfig(
+    format="%(asctime)s %(levelname)s %(message)s",
+    level=logging.INFO,
+    stream=sys.stdout,
+)
+
 
 def _get_parser():
     """Get parser object for hasy_tools.py."""
@@ -120,7 +126,7 @@ def _get_parser():
     return parser
 
 
-if __name__ == "__main__":
+def entry_point():
     args = _get_parser().parse_args()
     if args.verify:
         if args.dataset is None:
@@ -152,3 +158,7 @@ if __name__ == "__main__":
         _create_verification_task()
     if args.cm:
         _analyze_cm(args.cm)
+
+
+if __name__ == "__main__":
+    entry_point()

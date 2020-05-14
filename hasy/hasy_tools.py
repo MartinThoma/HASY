@@ -3,9 +3,6 @@
 """
 Tools for the HASY dataset.
 
-Type `./hasy_tools.py --help` for the command line tools and `help(hasy_tools)`
-in the interactive Python shell for the module options of hasy_tools.
-
 See https://arxiv.org/abs/1701.08380 for details about the dataset.
 """
 
@@ -34,11 +31,6 @@ from sklearn.model_selection import train_test_split
 
 np.random.seed(0)  # make sure results are reproducible
 random.seed(0)  # make sure results are reproducible
-logging.basicConfig(
-    format="%(asctime)s %(levelname)s %(message)s",
-    level=logging.INFO,
-    stream=sys.stdout,
-)
 
 n_classes = 369
 labels: List[str] = []
