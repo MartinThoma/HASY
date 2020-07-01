@@ -272,7 +272,7 @@ def load_data(mode="fold-1", image_dim_ordering="tf"):
         for i, data_item in enumerate(data_csv):
             fname = os.path.join(untar_fpath, data_item["path"])
             s_compl.append(fname)
-            x_compl[i, 0, :, :] = imageio.imread(fname, flatten=False, pilmode="L")
+            x_compl[i, 0, :, :] = imageio.imread(fname, as_gray=False, pilmode="L")
             label = symbol_id2index[data_item["symbol_id"]]
             y_compl.append(label)
             path2index[fname] = i
@@ -414,10 +414,10 @@ def load_images(
         fname = os.path.join(dataset_path, data_item["path"])
         sources.append(fname)
         if flatten:
-            img = imageio.imread(fname, flatten=False, pilmode="L")
+            img = imageio.imread(fname, as_gray=False, pilmode="L")
             images[i, :] = img.flatten()
         else:
-            images[i, :, :, 0] = imageio.imread(fname, flatten=False, pilmode="L")
+            images[i, :, :, 0] = imageio.imread(fname, as_gray=False, pilmode="L")
         label = symbol_id2index[data_item["symbol_id"]]
         labels.append(label)
     # Make sure the type of images is float32
@@ -623,7 +623,7 @@ def _get_colors(data, verbose=False):
         if i % 1000 == 0 and i > 0 and verbose:
             print("%i of %i done" % (i, len(data)))
         fname = os.path.join(".", data_item["path"])
-        img = imageio.imread(fname, flatten=False, pilmode="L")
+        img = imageio.imread(fname, as_gray=False, pilmode="L")
         for row in img:
             for pixel in row:
                 color_count[pixel] += 1
@@ -814,7 +814,7 @@ def _inner_class_distance(data):
     mean_img = None
     for e1 in data:
         fname1 = os.path.join(".", e1["path"])
-        img1 = imageio.imread(fname1, flatten=False, pilmode="L")
+        img1 = imageio.imread(fname1, as_gray=False, pilmode="L")
         if mean_img is None:
             mean_img = img1.tolist()
         else:
@@ -824,7 +824,7 @@ def _inner_class_distance(data):
     scipy.misc.imshow(mean_img)
     for e1 in data:
         fname1 = os.path.join(".", e1["path"])
-        img1 = imageio.imread(fname1, flatten=False, pilmode="L")
+        img1 = imageio.imread(fname1, as_gray=False, pilmode="L")
         dist = _get_euclidean_dist(img1, mean_img)
         distances.append(dist)
 
