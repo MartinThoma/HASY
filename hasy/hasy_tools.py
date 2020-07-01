@@ -21,9 +21,9 @@ from typing import List
 from urllib.request import urlretrieve
 
 # Third party modules
+import imageio
 import matplotlib.pyplot as plt
 import numpy as np
-import imageio
 from PIL import Image, ImageDraw
 from six.moves import urllib
 from six.moves.urllib.error import HTTPError, URLError
