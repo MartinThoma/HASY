@@ -23,7 +23,7 @@ from urllib.request import urlretrieve
 # Third party modules
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy.ndimage
+import imageio
 from PIL import Image, ImageDraw
 from six.moves import urllib
 from six.moves.urllib.error import HTTPError, URLError
@@ -272,7 +272,7 @@ def load_data(mode="fold-1", image_dim_ordering="tf"):
         for i, data_item in enumerate(data_csv):
             fname = os.path.join(untar_fpath, data_item["path"])
             s_compl.append(fname)
-            x_compl[i, 0, :, :] = scipy.ndimage.imread(fname, flatten=False, mode="L")
+            x_compl[i, 0, :, :] = imageio.imread(fname, flatten=False, mode="L")
             label = symbol_id2index[data_item["symbol_id"]]
             y_compl.append(label)
             path2index[fname] = i
