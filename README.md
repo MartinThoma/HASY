@@ -1,3 +1,10 @@
+[![PyPI version](https://badge.fury.io/py/hasy.svg)](https://badge.fury.io/py/hasy)
+[![Python Support](https://img.shields.io/pypi/pyversions/hasy.svg)](https://pypi.org/project/hasy/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+![GitHub last commit](https://img.shields.io/github/last-commit/MartinThoma/HASY)
+![GitHub commits since latest release (by SemVer)](https://img.shields.io/github/commits-since/MartinThoma/HASY/0.23.1)
+[![CodeFactor](https://www.codefactor.io/repository/github/martinthoma/HASY/badge/master)](https://www.codefactor.io/repository/github/martinthoma/HASY/overview/master)
+
 Please refer to the [HASY paper](https://arxiv.org/abs/1701.08380) for details
 about the dataset. If you want to report problems of the HASY dataset, please
 send an email to info@martin-thoma.de or file an issue at

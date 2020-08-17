@@ -79,9 +79,9 @@ if __name__ == "__main__":
 
     # Evaluate model
     score = model.evaluate(x_test, y_test, verbose=0)
-    print("Test accuarcy: {:0.2f}%".format(score[1] * 100))
+    print(f"Test accuarcy: {score[1] * 100:0.2f}%")
 
     # Run the model on one example
     prediction = model.predict(x_test[0].reshape(-1, 1, img_rows, img_cols))
     # only show first 3 probabilities
-    print("Prediction: {}".format(str(prediction[0][:3])))
+    print(f"Prediction: {prediction[0][:3]}")

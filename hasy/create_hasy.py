@@ -27,7 +27,7 @@ def load_dataset(filepath):
     """Load a HWRT dataset."""
     data = load_csv(filepath)
     dicts = []
-    for i, row in enumerate(data):
+    for _, row in enumerate(data):
         row["data"] = normalize_data(json.loads(row["data"]), 32, 32)
         dicts.append(row)
     return dicts
@@ -51,7 +51,6 @@ def normalize_data(lines, width, height):
         for j, p in enumerate(line):
             lines[i][j]["x"] = (p["x"] - min_x + x_translation) / dimensions * width
             lines[i][j]["y"] = (p["y"] - min_y + y_translation) / dimensions * height
-    # print(lines)
     return lines
 
 
@@ -90,7 +89,7 @@ def generate_dataset(data, symbols_dict, directory):
     for i, el in enumerate(data):
         if i % 1000 == 0:
             print("\t%i done" % i)
-        target_path = "{}/{}.png".format(directory, format_str.format(i))
+        target_path = f"{directory}/{format_str.format(i)}.png"
         draw(target_path, lines=el["data"])
         labels.append(
             (target_path, el["symbol_id"], symbols_dict[el["symbol_id"]], el["user_id"])

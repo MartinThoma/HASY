@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Core Library modules
 import logging
 import sys
@@ -30,8 +28,9 @@ logging.basicConfig(
 
 def _get_parser():
     """Get parser object for hasy_tools.py."""
+    # Core Library modules
     import argparse
-    from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+    from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
     parser = ArgumentParser(
         description=__doc__, formatter_class=ArgumentDefaultsHelpFormatter
@@ -115,7 +114,7 @@ def _get_parser():
         dest="count_users",
         action="store_true",
         default=False,
-        help="Count how many different users have created " "the dataset",
+        help="Count how many different users have created the dataset",
     )
     parser.add_argument(
         "--analyze-cm",

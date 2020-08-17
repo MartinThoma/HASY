@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 Tools for the HASY dataset.
 
@@ -15,7 +13,6 @@ import os
 import pickle
 import random
 import shutil
-import sys
 import tarfile
 from typing import List
 from urllib.request import urlretrieve
@@ -24,6 +21,7 @@ from urllib.request import urlretrieve
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy
 from PIL import Image, ImageDraw
 from six.moves import urllib
 from six.moves.urllib.error import HTTPError, URLError
@@ -114,7 +112,7 @@ def _validate_file(fpath: str, md5_hash: str) -> bool:
     is_valid : bool
         True, if the file is valid. Otherwise False.
     """
-    hasher = hashlib.md5()
+    hasher = hashlib.md5()  # noqa
     with open(fpath, "rb") as f:
         buf = f.read()
         hasher.update(buf)
@@ -169,14 +167,14 @@ def _get_file(fname, origin, md5_hash=None, cache_subdir="~/.datasets"):
 
     if download:
         print(f"Downloading data from {origin} to {fpath}")
-        error_msg = "URL fetch failure on {}: {} -- {}"
+        error_msg = "URL fetch failure on {}: {} -- {}"  # noqa
         try:
             try:
                 urlretrieve(origin, fpath)
             except URLError as e:
-                raise Exception(error_msg.format(origin, e.errno, e.reason))
+                raise Exception(error_msg.format(origin, e.errno, e.reason)) from e
             except HTTPError as e:
-                raise Exception(error_msg.format(origin, e.code, e.msg))
+                raise Exception(error_msg.format(origin, e.code, e.msg)) from e
         except (Exception, KeyboardInterrupt):
             if os.path.exists(fpath):
                 os.remove(fpath)
@@ -291,7 +289,7 @@ def load_data(mode="fold-1", image_dim_ordering="tf"):
             pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
     else:
         with open(pickle_fpath, "rb") as f:
-            data = pickle.load(f)
+            data = pickle.load(f)  # noqa
         globals()["labels"] = data["labels"]
 
     labels = data["labels"]
@@ -498,20 +496,18 @@ def _maybe_download(expected_files, work_directory="HASYv2"):
                 % (entry["filename"], statinfo.st_size)
             )
             with open(filepath, "rb") as f:
-                md5sum_actual = hashlib.md5(f.read()).hexdigest()
+                md5sum_actual = hashlib.md5(f.read()).hexdigest()  # noqa
             if md5sum_actual != entry["md5sum"]:
                 logging.error(
-                    "File '%s' was expected to have md5sum %s, but " "has '%s'",
-                    entry["filename"],
-                    entry["md5sum"],
-                    md5sum_actual,
+                    f"File '{entry['filename']}' was expected to have "
+                    f"md5sum '{entry['md5sum']}', but has '{md5sum_actual}'"
                 )
         else:
             with open(filepath, "rb") as f:
-                md5sum_actual = hashlib.md5(f.read()).hexdigest()
+                md5sum_actual = hashlib.md5(f.read()).hexdigest()  # noqa
             if md5sum_actual != entry["md5sum"]:
                 logging.error(
-                    "File '%s' was expected to have md5sum %s, but " "has '%s'",
+                    "File '%s' was expected to have md5sum %s, but has '%s'",
                     entry["filename"],
                     entry["md5sum"],
                     md5sum_actual,
@@ -519,6 +515,7 @@ def _maybe_download(expected_files, work_directory="HASYv2"):
 
 
 def _maybe_extract(tarfile_path, work_directory):
+    # Core Library modules
     import tarfile
 
     hasy_tools_path = os.path.join(work_directory, "hasy_tools.py")
@@ -538,7 +535,7 @@ def _get_data(dataset_path):
     filelist = [
         {
             "filename": "HASYv2.tar.bz2",
-            "source": ("https://zenodo.org/record/259444/files/" "HASYv2.tar.bz2"),
+            "source": "https://zenodo.org/record/259444/files/HASYv2.tar.bz2",
             "md5sum": "fddf23f36e24b5236f6b3a0880c778e3",
         }
     ]
@@ -673,13 +670,13 @@ def _get_color_statistics(csv_filepath, verbose=False):
         black_level.append(float(b) / (b + w))
         classes.append(symbol_id)
         if verbose:
-            print("{}:\t{:0.4f}".format(symbol_id, black_level[-1]))
-    print("Average black level: {:0.2f}%".format(np.average(black_level) * 100))
-    print("Median black level: {:0.2f}%".format(np.median(black_level) * 100))
+            print(f"{symbol_id}:\t{black_level[-1]:0.4f}")
+    print(f"Average black level: {np.average(black_level) * 100:0.2f}%")
+    print(f"Median black level: {np.median(black_level) * 100:0.2f}%")
     print(
-        "Minimum black level: {:0.2f}% (class: {})".format(
-            min(black_level),
-            [
+        "Minimum black level: {min:0.2f}% (class: {classes})".format(
+            min=min(black_level),
+            classes=[
                 symbolid2latex[c]
                 for bl, c in zip(black_level, classes)
                 if bl <= min(black_level)
@@ -687,9 +684,9 @@ def _get_color_statistics(csv_filepath, verbose=False):
         )
     )
     print(
-        "Maximum black level: {:0.2f}% (class: {})".format(
-            max(black_level),
-            [
+        "Maximum black level: {max:0.2f}% (class: {classes})".format(
+            max=max(black_level),
+            classes=[
                 symbolid2latex[c]
                 for bl, c in zip(black_level, classes)
                 if bl >= max(black_level)
@@ -728,12 +725,11 @@ def _analyze_class_distribution(csv_filepath, max_data, bin_size):
     print("Classes: %i" % len(classes))
     print("Images: %i" % images)
 
-    class_counts = sorted([count for _, count in classes.items()])
+    class_counts = sorted(count for _, count in classes.items())
     print("\tmin: %i" % min(class_counts))
 
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
-    # plt.title('HASY training data distribution')
     plt.xlabel("Amount of available testing images")
     plt.ylabel("Number of classes")
 
@@ -747,8 +743,7 @@ def _analyze_class_distribution(csv_filepath, max_data, bin_size):
 
     min_examples = 0
     ax1.hist(class_counts, bins=range(min_examples, max_data + 1, bin_size))
-    # plt.show()
-    filename = "{}.pdf".format("data-dist")
+    filename = "data-dist.pdf"
     plt.savefig(filename)
     logging.info(f"Plot has been saved as {filename}")
 
@@ -759,14 +754,14 @@ def _analyze_class_distribution(csv_filepath, max_data, bin_size):
     for index, count in top10:
         print("\t%s:\t%i" % (symbolid2latex[index2symbol_id[index]], count))
         top10_data += count
-    total_data = sum([count for index, count in classes.items()])
+    total_data = sum(count for index, count in classes.items())
     print(
         "Top-10 has %i training data (%0.2f%% of total)"
         % (top10_data, float(top10_data) * 100.0 / total_data)
     )
     print(
         "%i classes have more than %i data items."
-        % (sum([1 for _, count in classes.items() if count > max_data]), max_data)
+        % (sum(1 for _, count in classes.items() if count > max_data), max_data)
     )
 
 
@@ -779,8 +774,11 @@ def _analyze_pca(csv_filepath):
     csv_filepath : str
         Path relative to dataset_path to a CSV file which points to images
     """
-    from sklearn.decomposition import PCA
+    # Core Library modules
     import itertools as it
+
+    # Third party modules
+    from sklearn.decomposition import PCA
 
     symbol_id2index, labels = generate_index(csv_filepath)
     data, y, s = load_images(csv_filepath, symbol_id2index, one_hot=False)
@@ -805,7 +803,7 @@ def _get_euclidean_dist(e1, e2):
     """Calculate the euclidean distance between e1 and e2."""
     e1 = e1.flatten()
     e2 = e2.flatten()
-    return sum([(el1 - el2) ** 2 for el1, el2 in zip(e1, e2)]) ** 0.5
+    return sum((el1 - el2) ** 2 for el1, el2 in zip(e1, e2)) ** 0.5
 
 
 def _inner_class_distance(data):
@@ -820,7 +818,6 @@ def _inner_class_distance(data):
         else:
             mean_img += img1
     mean_img = mean_img / float(len(data))
-    # mean_img = thresholdize(mean_img, 'auto')
     scipy.misc.imshow(mean_img)
     for e1 in data:
         fname1 = os.path.join(".", e1["path"])
@@ -858,19 +855,18 @@ def _analyze_distances(csv_filepath):
     for class_, data_class in data.items():
         latex = symbolid2latex[class_]
         d, mean_img = _inner_class_distance(data_class)
-        # scipy.misc.imshow(mean_img)
         print(
             "%s: min=%0.4f, avg=%0.4f, median=%0.4f max=%0.4f"
             % (latex, np.min(d), np.average(d), np.median(d), np.max(d))
         )
         distarr = sorted(
-            [
+            (
                 (label, mean_c, _get_euclidean_dist(mean_c, mean_img))
                 for label, mean_c in mean_imgs
-            ],
+            ),
             key=lambda n: n[2],
         )
-        for label, mean_c, d in distarr:
+        for label, _mean_c, d in distarr:
             print(f"\t{label}: {d:0.4f}")
         mean_imgs.append((latex, mean_img))
 
@@ -908,9 +904,10 @@ def _analyze_correlation(csv_filepath):
     csv_filepath : str
         Path to a CSV file which points to images
     """
+    # Third party modules
     import pandas as pd
-    from matplotlib import pyplot as plt
     from matplotlib import cm as cm
+    from matplotlib import pyplot as plt
 
     symbol_id2index, labels = generate_index(csv_filepath)
     data, y, s = load_images(csv_filepath, symbol_id2index, one_hot=False, flatten=True)
@@ -935,7 +932,7 @@ def _analyze_correlation(csv_filepath):
     # Add colorbar, make sure to specify tick locations to match desired
     # ticklabels
     fig.colorbar(cax, ticks=[-0.15, 0, 0.15, 0.30, 0.45, 0.60, 0.75, 0.90, 1])
-    filename = "{}.pdf".format("feature-correlation")
+    filename = "feature-correlation.pdf"
     plt.savefig(filename)
 
 
@@ -950,6 +947,7 @@ def _create_stratified_split(csv_filepath, n_splits):
     n_splits : int
         Number of splits to make
     """
+    # Third party modules
     from sklearn.model_selection import StratifiedKFold
 
     data = _load_csv(csv_filepath)
@@ -1030,7 +1028,7 @@ def _create_verification_task(sample_size=32, test_size=0.05):
 
     # Get data from remaining classes
     data_n = []
-    for class_label, items in data:
+    for _class_label, items in data:
         data_n = data_n + items
     ys = [el["symbol_id"] for el in data_n]
     x_train, x_test, y_train, y_test = train_test_split(data_n, ys, test_size=test_size)
@@ -1056,7 +1054,7 @@ def _create_verification_task(sample_size=32, test_size=0.05):
     with open("%s/test-v1.csv" % kdirectory, "wb") as csv_file:
         csv_writer = csv.writer(csv_file)
         csv_writer.writerow(("path1", "path2", "is_same"))
-        for i in range(100000):
+        for _ in range(100000):
             test_data_tuple = _create_pair(x_test_inc_class, x_test_inc_class)
             csv_writer.writerow(test_data_tuple)
 
@@ -1064,7 +1062,7 @@ def _create_verification_task(sample_size=32, test_size=0.05):
     with open("%s/test-v2.csv" % kdirectory, "wb") as csv_file:
         csv_writer = csv.writer(csv_file)
         csv_writer.writerow(("path1", "path2", "is_same"))
-        for i in range(100000):
+        for _ in range(100000):
             test_data_tuple = _create_pair(x_test_inc_class, x_text_exc_class)
             csv_writer.writerow(test_data_tuple)
 
@@ -1072,7 +1070,7 @@ def _create_verification_task(sample_size=32, test_size=0.05):
     with open("%s/test-v3.csv" % kdirectory, "wb") as csv_file:
         csv_writer = csv.writer(csv_file)
         csv_writer.writerow(("path1", "path2", "is_same"))
-        for i in range(100000):
+        for _ in range(100000):
             test_data_tuple = _create_pair(x_text_exc_class, x_text_exc_class)
             csv_writer.writerow(test_data_tuple)
 
@@ -1136,7 +1134,7 @@ def _analyze_cm(cm_file: str, total_symbols=100):
     # Number of recordings for symbols which have an accuracy of less than 5%
     sum_difficult_five = 0
     for i in range(n):
-        total = sum([cm[i][j] for j in range(n)])
+        total = sum(cm[i][j] for j in range(n))
         class_accuracy.append(
             {
                 "class_index": i,
@@ -1159,16 +1157,10 @@ def _analyze_cm(cm_file: str, total_symbols=100):
             sum_difficult_five += class_accuracy[i]["class_total"]
         latex_orig = index2latex(class_accuracy[i]["class_index"])
         latex_conf = index2latex(class_accuracy[i]["class_confusion_index"])
-        # print("\t%i. \t%s:\t%0.4f (%s); correct=%i" %
-        #       (i + 1,
-        #        latex_orig,
-        #        class_accuracy[i]['class_accuracy'],
-        #        latex_conf,
-        #        class_accuracy[i]['correct_total']))
         print(
             (
-                "\t\\verb+{:<15}+ & ${:<15}$ & {:<15} & \\verb+{:<15}+ "
-                "& ${:<15}$ \\\\ ({})"
+                "\t\\verb+{:<15}+ & ${:<15}$ & {:<15} & \\verb+{:<15}+ "  # noqa
+                "& ${:<15}$ \\\\ ({})"  # noqa
             ).format(
                 latex_orig,
                 latex_orig,
@@ -1190,16 +1182,10 @@ def _analyze_cm(cm_file: str, total_symbols=100):
         latex_conf = index2latex(class_accuracy[i]["class_confusion_index"])
         if class_accuracy[i]["class_accuracy"] < 0.99:
             break
-        # print("\t%i. \t%s:\t%0.4f (%s); correct=%i" %
-        #       (i + 1,
-        #        latex_orig,
-        #        class_accuracy[i]['class_accuracy'],
-        #        latex_conf,
-        #        class_accuracy[i]['correct_total']))
         print(
             (
-                "\t\\verb+{:<15}+ & ${:<15}$ & {:<15} & "
-                "\\verb+{:<15}+ & ${:<15}$ \\\\ ({})"
+                "\t\\verb+{:<15}+ & ${:<15}$ & {:<15} & "  # noqa
+                "\\verb+{:<15}+ & ${:<15}$ \\\\ ({})"  # noqa
             ).format(
                 latex_orig,
                 latex_orig,
@@ -1209,8 +1195,6 @@ def _analyze_cm(cm_file: str, total_symbols=100):
                 class_accuracy[i]["correct_total"],
             )
         )
-    # cm = np.array(cm)
-    # scipy.misc.imshow(cm)
 
 
 def preprocess(x):

@@ -18,9 +18,10 @@ np.random.seed(0)  # make sure results are reproducible
 tf.random.set_seed(0)  # make sure results are reproducible
 
 if __name__ == "__main__":
+    # Third party modules
     import tflearn
-    from tflearn.layers.core import input_data, fully_connected, dropout
     from tflearn.layers.conv import conv_2d, max_pool_2d
+    from tflearn.layers.core import dropout, fully_connected, input_data
     from tflearn.layers.estimator import regression
 
     batch_size = 128
@@ -81,9 +82,9 @@ if __name__ == "__main__":
 
     # Evaluate model
     score = model.evaluate(x_test, y_test)
-    print("Test accuarcy: {:0.2f}%".format(score[0] * 100))
+    print(f"Test accuarcy: {score[0] * 100:0.2f}%")
 
     # Run the model on one example
     prediction = model.predict([x_test[0]])
     # only show first 3 probabilities
-    print("Prediction: {}".format(str(prediction[0][:3])))
+    print(f"Prediction: {prediction[0][:3]}")
