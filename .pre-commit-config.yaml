@@ -1,5 +1,10 @@
 # pre-commit run --all-files
 repos:
+-   repo: https://github.com/jazzband/pip-tools
+    rev: 5.3.1
+    hooks:
+      - id: pip-compile
+        files: ^setup\.py|requirements-dev\.in|requirements-lint\.in$
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v3.2.0
     hooks:
