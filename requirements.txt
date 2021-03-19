@@ -13,7 +13,7 @@ numpy==1.20.1
     #   hasy (setup.py)
     #   imageio
     #   scipy
-pillow==8.1.0
+pillow==8.1.1
     # via
     #   hasy (setup.py)
     #   imageio
