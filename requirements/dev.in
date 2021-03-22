@@ -1,12 +1,5 @@
-boto3
-hypothesis
-moto
-pandas
+-r ci.txt
 pip-tools
-pytest
-pytest-cov
-pytest-mccabe
-pytest-timeout
-simplejson
+pre-commit
 twine
 wheel
