@@ -15,7 +15,7 @@ from keras import backend as K  # noqa
 from keras.layers import Convolution2D, Dense, Dropout, Flatten, MaxPooling2D
 from keras.layers.advanced_activations import PReLU
 from keras.models import Sequential
-from keras.optimizers import Adam
+from keras.optimizer_v2 import Adam
 
 # First party modules
 import hasy.hasy_tools as ht
