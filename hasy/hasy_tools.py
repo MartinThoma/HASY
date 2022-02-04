@@ -888,7 +888,7 @@ def _analyze_variance(csv_filepath):
     for el in data:
         el = np.squeeze(el)
         centered_ += (el - mean_) ** 2
-    centered_ = (1.0 / len(data)) * centered_ ** 0.5
+    centered_ = (1.0 / len(data)) * centered_**0.5
     scipy.misc.imshow(centered_)
     for row in list(centered_):
         row = list(row)
