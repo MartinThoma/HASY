@@ -8,7 +8,7 @@ click==7.1.2
     # via hasy (setup.py)
 imageio==2.9.0
     # via hasy (setup.py)
-numpy==1.20.1
+numpy==1.21.0
     # via
     #   hasy (setup.py)
     #   imageio
