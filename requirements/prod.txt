@@ -17,7 +17,7 @@ pillow==9.0.1
     # via
     #   hasy (setup.py)
     #   imageio
-scipy==1.6.1
+scipy==1.10.0
     # via hasy (setup.py)
 six==1.15.0
     # via hasy (setup.py)
